@@ -1,0 +1,46 @@
+/* Copyright 2021 Unity-Drive Inc. All rights reserved */
+
+#pragma once
+
+#include <geometry_msgs/PoseStamped.h>
+#include <glog/logging.h>
+#include <ros/ros.h>
+
+#include <memory>
+#include <mutex>
+
+#include "planning_core/mock_predictor/const_vel_predictor.h"
+#include "planning_core/navigation/navigation_map.h"
+#include "planning_core/planner/planner.h"
+#include "planning_core/planning_common/data_frame.h"
+#include "planning_core/simulation/simulator_adapter.h"
+
+namespace planning {
+
+class PlanningCore {
+ public:
+  PlanningCore() = default;
+
+  void Init();
+
+  void Run(const ros::TimerEvent&);
+
+ private:
+  void NewRouteCallBack(const geometry_msgs::PoseStamped& goal);
+  bool UpdateDataFrame();
+
+ private:
+  std::mutex route_mutex_;
+  bool has_new_route_ = false;
+  ros::Subscriber route_target_sub_;
+  geometry_msgs::PoseStamped route_goal_;
+
+  NavigationMap navigation_map_;
+  std::shared_ptr<DataFrame> data_frame_;
+  std::unique_ptr<simulation::SimulatorAdapter> simulator_;
+
+  std::unique_ptr<Planner> planner_;
+  std::unique_ptr<MockPredictor> mock_predictor_;
+};
+
+}  // namespace planning

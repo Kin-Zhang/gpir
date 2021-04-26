@@ -1,0 +1,13 @@
+include(../cmake/gp_planner_helper.cmake)
+
+# add_example(pure_prior)
+# add_example(simple_obstacle)
+# add_example(simple_interpolate_obstacle)
+add_example(simple_interpolate_with_initializer)
+# add_example(gp_model_test)
+add_example(simple_kappa_test)
+add_example(new_kappa_test)
+# add_example(min_jerk_test)
+# add_example(new_initializer)
+add_example(st_graph_test)
+add_example(bounnder_penalty)

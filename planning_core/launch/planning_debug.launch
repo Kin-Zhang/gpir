@@ -1,0 +1,13 @@
+<launch>
+
+<arg name="map_path" default="$(find hdmap)/maps/"/>
+<arg name="town" default="Town03"/>
+<arg name="simulator" default="Carla"/>
+
+<node pkg="planning_core" name="planning" type="planning" output="screen">
+  <param name="town" value="$(arg town)"/>
+  <param name="simulator" value="$(arg simulator)"/>
+  <param name="map_path" value="$(arg map_path)"/>
+</node>
+
+</launch>

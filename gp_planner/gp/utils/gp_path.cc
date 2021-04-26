@@ -1,0 +1,76 @@
+/* Copyright 2021 Unity-Drive Inc. All rights reserved */
+
+#include "gp_planner/gp/utils/gp_path.h"
+
+#include "planning_core/planning_common/vehicle_info.h"
+
+namespace planning {
+
+GPPath::GPPath(const int num_nodes, const double start_s, const double delta_s,
+               const double length, const double qc,
+               const ReferenceLine& reference_line)
+    : num_nodes_(num_nodes),
+      start_s_(start_s),
+      delta_s_(delta_s),
+      end_s_(start_s + length),
+      qc_(qc),
+      reference_line_(reference_line),
+      interpolator_(delta_s, qc) {}
+
+void GPPath::GetState(const double s, common::State* state) const {
+  Eigen::Vector3d d;
+  GetInterpolateNode(s, &d);
+  reference_line_.FrenetToState(s, d, state);
+}
+
+bool GPPath::HasOverlapWith(const common::State& state, const double length,
+                            const double width, double* s_l,
+                            double* s_u) const {
+  double inital_s = reference_line_.GetArcLength(state.position);
+
+  common::State ego_state;
+  GetState(inital_s, &ego_state);
+  common::Box2D ego_box;
+  GetEgoBox(ego_state, &ego_box);
+  common::Box2D obs_box(state.position, length, width, state.heading);
+
+  if (!ego_box.HasOverlapWith(obs_box)) {
+    *s_l = 0.0;
+    *s_u = 0.0;
+    return false;
+  }
+
+  constexpr double kStepLength = 0.3;
+  double forward_s = inital_s + kStepLength;
+  double backward_s = inital_s - kStepLength;
+
+  while (forward_s <= end_s_) {
+    GetState(forward_s, &ego_state);
+    GetEgoBox(ego_state, &ego_box);
+    if (!ego_box.HasOverlapWith(obs_box)) break;
+    forward_s += kStepLength;
+  }
+  while (backward_s >= start_s_) {
+    GetState(backward_s, &ego_state);
+    GetEgoBox(ego_state, &ego_box);
+    if (!ego_box.HasOverlapWith(obs_box)) break;
+    backward_s -= kStepLength;
+  }
+
+  *s_l = backward_s + kStepLength / 2.0;
+  *s_u = forward_s - kStepLength / 2.0;
+
+  return true;
+}
+
+void GPPath::GetEgoBox(const common::State& ego_state,
+                       common::Box2D* ego_box) const {
+  static const VehicleParam& ego_param =
+      VehicleInfo::Instance().vehicle_param();
+  *ego_box = common::Box2D(
+      ego_state.position + Eigen::Vector2d(std::cos(ego_state.heading),
+                                           std::sin(ego_state.heading)) *
+                               ego_param.rear_axle_to_center,
+      ego_param.length, ego_param.width, ego_state.heading);
+}
+}  // namespace planning

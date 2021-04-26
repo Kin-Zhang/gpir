@@ -1,0 +1,3 @@
+add_subdirectory(ad_map_access)
+add_subdirectory(ad_map_opendrive_reader)
+add_subdirectory(ad_physics)

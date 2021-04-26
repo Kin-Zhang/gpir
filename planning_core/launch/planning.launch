@@ -1,0 +1,22 @@
+<launch>
+
+<arg name="map_path" default="$(find hdmap)/maps/"/>
+<arg name="town" default="Town04"/>
+<arg name="simulator" default="Carla"/>
+
+<node pkg="planning_core" name="planning" type="planning" output="screen">
+  <param name="town" value="$(arg town)"/>
+  <param name="simulator" value="$(arg simulator)"/>
+  <param name="map_path" value="$(arg map_path)"/>
+</node>
+
+<!-- rviz -->
+<arg name="rvizconfig" default="$(find planning_core)/rviz/planning.rviz"/>
+<node name="planning_rviz" pkg="rviz" type="rviz" args="-d $(arg rvizconfig)" required="false" />
+
+<!-- 3D model display -->
+<arg name="model" default="$(find planning_core)/3d_model/3d_model.xacro" />
+<param name="robot_description" command="$(find xacro)/xacro --inorder $(arg model)" />
+<node name="vehicle" pkg="robot_state_publisher" type="robot_state_publisher" />
+
+</launch>

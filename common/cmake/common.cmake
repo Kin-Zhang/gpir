@@ -1,0 +1,6 @@
+function(add_gtest test_name test_source test_lib)
+  add_executable(${test_name} ${test_source})
+  target_link_libraries(${test_name} gtest gtest_main)
+  target_link_libraries(${test_name} ${test_lib})
+  add_test(NAME ${test_name} COMMAND ${test_name})
+endfunction()

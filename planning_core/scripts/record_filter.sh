@@ -1,0 +1,1 @@
+rosbag filter "$1" "filted_$1" "topic != '/hdmap' and topic != '/hdmap_topo' and topic != '/hdmap_full_route'"
