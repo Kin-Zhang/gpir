@@ -20,7 +20,7 @@ class Spline2dSolver {
         kernel_(t_knots, order),
         constraint_(t_knots, order) {}
 
-  virtual ~Spline2dSolver() { std::cout << "fuck you" << std::endl; }
+  virtual ~Spline2dSolver() {}
 
   virtual void Reset(const std::vector<double>& t_knots,
                      const uint32_t order) = 0;

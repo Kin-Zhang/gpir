@@ -69,7 +69,6 @@ void GPPlanner::PlanOnce(NavigationMap* navigation_map_) {
   auto sdf = std::make_shared<SignedDistanceField2D>(std::move(occupancy_map));
   sdf->UpdateSDF();
 
-  vector_Eigen<Eigen::Vector2d> path;
   GPPathOptimizer gp_path_optimizer;
   gp_path_optimizer.set_sdf(sdf);
 
@@ -85,10 +84,10 @@ void GPPlanner::PlanOnce(NavigationMap* navigation_map_) {
 
   navigation_map_->mutable_trajectory()->clear();
 
-  std::unique_ptr<GPPath> gp_path;
-  if (!gp_path_optimizer.GenerateGPPath(
-          reference_line, start_state, 90, proj.s, &path,
-          navigation_map_->mutable_trajectory(), gp_path.get())) {
+  GPPath gp_path;
+  if (!gp_path_optimizer.GenerateGPPath(reference_line, start_state, 90, proj.s,
+                                        navigation_map_->mutable_trajectory(),
+                                        &gp_path)) {
     LOG(ERROR) << "path failed";
     return;
   }

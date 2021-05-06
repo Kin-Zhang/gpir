@@ -80,11 +80,13 @@ bool NavigationMap::UpdateReferenceLine() {
   // * update reference speed
   const double lat_acc_limit = 1.5;
   double kappa, dkappa = 0.0;
-  const double forward_duration = refernce_speed_ / 3.0;
-  const double forward_length =
-      std::min(std::max(forward_duration * refernce_speed_, 50.0),
-               reference_line_.length());
-  const double step_length = 1;
+  // const double forward_duration = refernce_speed_ / 3.0;
+  const double forward_length = std::min(
+      std::max(data_frame_->state.velocity * data_frame_->state.velocity / 6.0,
+               30.0),
+      reference_line_.length());
+  // const double forward_length = std::min(50.0, reference_line_.length());
+  const double step_length = 0.15;
   refernce_speed_ = 18.0;
   for (double s = 0; s <= forward_length; s += step_length) {
     reference_line_.GetCurvature(s, &kappa, &dkappa);

@@ -74,7 +74,7 @@ class GridMap2D {
   inline T GetValue(const int index_x, const int index_y) const;
   inline T GetValueSafe(const Eigen::Vector2i& index) const;
   inline double GetValueBilinear(const Eigen::Vector2d& coord,
-                                 Eigen::Vector2d* grad) const;
+                                 Eigen::Vector2d* grad = nullptr) const;
   inline void SetValue(const Eigen::Vector2i& index, const T value);
   inline void SetValue(const int index_x, const int index_y, const T val);
 
@@ -283,7 +283,11 @@ inline T GridMap2D<T>::GetValue(const int x, const int y) const {
 template <typename T>
 inline double GridMap2D<T>::GetValueBilinear(const Eigen::Vector2d& coord,
                                              Eigen::Vector2d* grad) const {
-  if (!IsInMap(coord)) return static_cast<T>(0);
+  if (!IsInMap(coord)) {
+    // LOG(WARNING) << "query out of map, "
+    //              << "(" << coord.x() << ", " << coord.y() << ")";
+    return static_cast<T>(0);
+  }
 
   Eigen::Vector2d coord_tmp(coord(0) - 0.5 * cell_resolution_[0],
                             coord(1) - 0.5 * cell_resolution_[1]);
@@ -310,8 +314,10 @@ inline double GridMap2D<T>::GetValueBilinear(const Eigen::Vector2d& coord,
   double x0 = (1 - diff(1)) * value[0][0] + diff(1) * value[0][1];
   double x1 = (1 - diff(1)) * value[1][0] + diff(1) * value[1][1];
 
-  (*grad)(0) = (x1 - x0) * cell_resolution_inv_[0];
-  (*grad)(1) = (y1 - y0) * cell_resolution_inv_[1];
+  if (grad) {
+    (*grad)(0) = (x1 - x0) * cell_resolution_inv_[0];
+    (*grad)(1) = (y1 - y0) * cell_resolution_inv_[1];
+  }
 
   return (1 - diff(1)) * y0 + diff(1) * y1;
 }

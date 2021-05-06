@@ -22,8 +22,8 @@ class GPPathOptimizer {
 
   bool GenerateGPPath(const ReferenceLine& reference_line,
                       const common::State& state, const double length,
-                      const double s, vector_Eigen<Eigen::Vector2d>* path,
-                      common::Trajectory* trajectory, GPPath* gp_path);
+                      const double s, common::Trajectory* trajectory,
+                      GPPath* gp_path);
 
  private:
   int num_of_nodes_ = 21;

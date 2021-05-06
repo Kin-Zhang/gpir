@@ -20,7 +20,9 @@ class HdMapImpl {
   HdMapImpl() = default;
   HdMapImpl(const HdMapImpl&) = delete;
   HdMapImpl& operator=(const HdMapImpl&) = delete;
-  ~HdMapImpl() { rviz_thread_.join(); }
+  ~HdMapImpl() {
+    if (rviz_thread_.joinable()) rviz_thread_.join();
+  }
 
   bool LoadMap(const std::string& map_file, const std::string& pcd_file = "");
 

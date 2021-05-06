@@ -17,6 +17,7 @@ target_link_libraries(gp_planner_gp PUBLIC
   gtsam
   planning_core::navigation
   common::smoothing
+  gp_planner::initializer
 )
 # target_link_libraries(gp_planner_gp PRIVATE
 #   gtsam

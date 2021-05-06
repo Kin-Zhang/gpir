@@ -2,6 +2,8 @@
 
 #pragma once
 
+#include <string>
+
 namespace planning {
 
 struct VehicleParam {
@@ -17,6 +19,16 @@ struct VehicleParam {
   double max_speed = 0.0;        // m/s
   double max_steer_angle = 0.0;  // rad
   double max_kappa = 0.0;        // rad
+
+  std::string DebugString() {
+    std::ostringstream os;
+    os << "length: " << length << "\nwidth: " << width << "\nheight: " << height
+       << "\nwheel_base: " << wheel_base
+       << "\nfront_to_front_axle: " << front_to_front_axle
+       << "\nback_to_rear_axle: " << back_to_rear_axle
+       << "\nrear_axle_to_center: " << rear_axle_to_center << "\n";
+    return os.str();
+  }
 };
 
 class VehicleInfo {

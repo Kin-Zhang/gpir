@@ -91,8 +91,8 @@ void Lane::CreateWayPoints() {
   auto left_edge = admap_lane_->edgeLeft.private_enuEdgeCache.enuEdge;
   auto right_edge = admap_lane_->edgeRight.private_enuEdgeCache.enuEdge;
 
-  assert(left_edge.size() == center_line.size());
-  assert(right_edge.size() == center_line.size());
+  // assert(left_edge.size() == center_line.size());
+  // assert(right_edge.size() == center_line.size());
 
   points_num_ = center_line.size();
 
@@ -112,17 +112,17 @@ void Lane::CreateWayPoints() {
     way_point.point = AdMapConvertion::FromEnuPoint(center_line[i]);
     way_points_.emplace_back(way_point);
     arc_length += distance(center_line[i], center_line[i + 1]);
-    left = distance(left_edge[i], center_line[i]);
-    right = -distance(right_edge[i], center_line[i]);
-    lane_boundary_.emplace_back(std::make_pair(left, right));
+    // left = distance(left_edge[i], center_line[i]);
+    // right = -distance(right_edge[i], center_line[i]);
+    // lane_boundary_.emplace_back(std::make_pair(left, right));
   }
   way_point.s = arc_length;
   way_point.heading = way_points_.empty() ? 0.0 : way_points_.back().heading;
   way_point.point = AdMapConvertion::FromEnuPoint(center_line.back());
   way_points_.emplace_back(way_point);
-  lane_boundary_.emplace_back(std::make_pair(
-      distance(left_edge[points_num_ - 1], center_line[points_num_ - 1]),
-      -distance(right_edge[points_num_ - 1], center_line[points_num_ - 1])));
+  // lane_boundary_.emplace_back(std::make_pair(
+  //     distance(left_edge[points_num_ - 1], center_line[points_num_ - 1]),
+  //     -distance(right_edge[points_num_ - 1], center_line[points_num_ - 1])));
 
   // * update arc length
   length_ = arc_length;

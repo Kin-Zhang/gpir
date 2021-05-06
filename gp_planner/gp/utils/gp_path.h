@@ -11,9 +11,10 @@ namespace planning {
 
 class GPPath {
  public:
+  GPPath() = default;
   GPPath(const int num_nodes, const double start_s, const double delta_s,
          const double length, const double qc,
-         const ReferenceLine& reference_line);
+         const ReferenceLine* reference_line);
 
   void GetState(const double s, common::State* state) const;
 
@@ -30,7 +31,7 @@ class GPPath {
     int index = std::max(
         std::min(static_cast<int>((s - start_s_) / delta_s_), num_nodes_ - 2),
         0);
-    interpolator_.Interpolate(nodes_[index], node[index + 1],
+    interpolator_.Interpolate(nodes_[index], nodes_[index + 1],
                               s - start_s_ - index * delta_s_, node);
   }
 
@@ -43,7 +44,7 @@ class GPPath {
 
   GPInterpolator interpolator_;
   vector_Eigen<Eigen::Vector3d> nodes_;
-  const ReferenceLine& reference_line_;
+  const ReferenceLine* reference_line_;
 };
 
 }  // namespace planning

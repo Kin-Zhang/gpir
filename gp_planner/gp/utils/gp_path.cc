@@ -8,7 +8,7 @@ namespace planning {
 
 GPPath::GPPath(const int num_nodes, const double start_s, const double delta_s,
                const double length, const double qc,
-               const ReferenceLine& reference_line)
+               const ReferenceLine* reference_line)
     : num_nodes_(num_nodes),
       start_s_(start_s),
       delta_s_(delta_s),
@@ -20,13 +20,14 @@ GPPath::GPPath(const int num_nodes, const double start_s, const double delta_s,
 void GPPath::GetState(const double s, common::State* state) const {
   Eigen::Vector3d d;
   GetInterpolateNode(s, &d);
-  reference_line_.FrenetToState(s, d, state);
+  reference_line_->FrenetToState(s, d, state);
+  state->debug = d;
 }
 
 bool GPPath::HasOverlapWith(const common::State& state, const double length,
                             const double width, double* s_l,
                             double* s_u) const {
-  double inital_s = reference_line_.GetArcLength(state.position);
+  double inital_s = reference_line_->GetArcLength(state.position);
 
   common::State ego_state;
   GetState(inital_s, &ego_state);
@@ -40,7 +41,7 @@ bool GPPath::HasOverlapWith(const common::State& state, const double length,
     return false;
   }
 
-  constexpr double kStepLength = 0.3;
+  constexpr double kStepLength = 0.5;
   double forward_s = inital_s + kStepLength;
   double backward_s = inital_s - kStepLength;
 

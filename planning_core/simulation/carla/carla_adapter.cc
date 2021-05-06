@@ -30,6 +30,7 @@ bool CarlaAdapter::InitVehicleParam(VehicleParam* vehicle_param) {
     ros::spinOnce();
     if (carla_ego_info_.GetVehicleParam(vehicle_param)) {
       wheel_base_ = vehicle_param->wheel_base;
+      LOG(INFO) << "\n" << vehicle_param->DebugString();
       return true;
     }
     LOG(WARNING) << "fail to get vehicle param from Carla, Retry: " << i;

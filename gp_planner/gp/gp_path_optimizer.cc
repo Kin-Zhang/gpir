@@ -29,7 +29,6 @@ constexpr double kQc = 0.1;
 bool GPPathOptimizer::GenerateGPPath(const ReferenceLine& reference_line,
                                      const common::State& state,
                                      const double length, const double s,
-                                     vector_Eigen<Eigen::Vector2d>* path,
                                      common::Trajectory* trajectory,
                                      GPPath* gp_path) {
   static auto fix_pos_cost = gtsam::noiseModel::Isotropic::Sigma(3, 0.001);
@@ -130,71 +129,6 @@ bool GPPathOptimizer::GenerateGPPath(const ReferenceLine& reference_line,
     gtsam::Key key = gtsam::symbol('x', i);
     init_values.insert<gtsam::Vector3>(key, resa[i]);
   }
-  // std::vector<double> ref(s_refs_.size(), 0);
-
-  // auto mutable_kernel = spline2d_solver->mutable_kernel();
-  // auto mutable_constraint = spline2d_solver->mutable_constraint();
-  // mutable_kernel->AddReferenceLineKernelMatrix(s_refs_, ref, 20);
-  // mutable_kernel->AddThirdOrderDerivativeMatrix(1000);
-  // mutable_constraint->AddPointConstraint(start_s, x0(0));
-  // mutable_constraint->AddPointDerivativeConstraint(start_s, x0(1));
-  // mutable_constraint->AddPointSecondDerivativeConstraint(start_s, x0(2));
-  // mutable_constraint->AddPointConstraint(start_s + length, xn(0));
-  // mutable_constraint->AddPointDerivativeConstraint(start_s + length, xn(1));
-  // mutable_constraint->AddPointSecondDerivativeConstraint(start_s + length,
-  //                                                        xn(2));
-
-  // if (s > 0) {
-  //   mutable_constraint->AddBoundary(
-  //       std::vector<double>{s},
-  //       std::vector<double>{boundaries[0].front().first},
-  //       std::vector<double>{boundaries[0].front().second});
-  // }
-
-  // if (!spline2d_solver->Solve()) {
-  //   LOG(ERROR) << "solve failed";
-  //   return false;
-  // }
-
-  // auto spline = spline2d_solver->spline();
-
-  // for (int i = 0; i < s_refs_.size(); ++i) {
-  //   gtsam::Key key = gtsam::symbol('x', i);
-  //   Eigen::Vector3d val(spline(s_refs_[i]), spline.Derivative(s_refs_[i]),
-  //                       spline.SecondOrderDerivative(s_refs_[i]));
-
-  //   LOG(INFO) << val.x() << ", " << val.y() << ", " << val.z();
-  //   // l.emplace_back(spline(s_refs_[i]));
-  //   // init_values.insert<gtsam::Vector3>(key, val);
-  // }
-
-  // min_jerk::Trajectory traj;
-  // if (s > 0) {
-  //   Eigen::MatrixXd route(1, 1);
-  //   route << (boundaries[0].front().first + boundaries[0].front().second)
-  //   / 2.0; LOG(WARNING) << "start_s: " << start_s << ", "
-  //                << "s: " << s << " second: " << length - s
-  //                << " point: " << route(0, 0);
-  //   min_jerk::JerkOpt jerk_opt;
-  //   jerk_opt.reset(x0.transpose(), xn.transpose(), 2);
-  //   jerk_opt.generate(route,
-  //                     Eigen::Vector2d(s - start_s, start_s + length -
-  //                     s));
-  //   jerk_opt.getTraj(traj);
-  // } else {
-  //   min_jerk::BoundaryCond bound;
-  //   bound << x0.transpose(), xn.transpose();
-  //   traj.emplace_back(min_jerk::Piece(bound, length));
-  // }
-
-  // for (int i = 0; i < s_refs_.size(); ++i) {
-  //   gtsam::Key key = gtsam::symbol('x', i);
-  //   Eigen::Vector3d val(traj.getPos(s_refs_[i] - start_s).x(),
-  //                       traj.getVel(s_refs_[i] - start_s).x(),
-  //                       traj.getAcc(s_refs_[i] - start_s).x());
-  //   l.emplace_back(traj.getPos(s_refs_[i] - start_s).x());
-  //   init_values.insert<gtsam::Vector3>(key, val);
-  // }
 
   // gtsam::DoglegParams param;
   // param.setDeltaInitial(10.0);
@@ -222,32 +156,41 @@ bool GPPathOptimizer::GenerateGPPath(const ReferenceLine& reference_line,
   int inter_num = 20;
   double delta_tau = delta_s / (inter_num + 1);
 
+  *gp_path =
+      GPPath(num_of_nodes_, start_s, delta_s, length, kQc, &reference_line);
+  auto gp_path_nodes = gp_path->mutable_nodes();
   common::State traj_state;
   std::vector<double> t, x, v, a;
-  for (size_t i = 0; i < res.size() - 1; ++i) {
+  LOG(INFO) << "res size: " << res.size();
+  for (size_t i = 0; i < res.size(); ++i) {
     auto x1 = res.at<gtsam::Vector3>(gtsam::Symbol('x', i));
-    auto x2 = res.at<gtsam::Vector3>(gtsam::Symbol('x', i + 1));
-    t.emplace_back(i * delta_s + start_s);
-    x.emplace_back(x1(0));
-    v.emplace_back(x1(1));
-    a.emplace_back(x1(2));
-    reference_line.FrenetToState(t.back(), x1, &traj_state);
-    traj_state.debug = x1;
-    trajectory->emplace_back(traj_state);
+    // auto x2 = res.at<gtsam::Vector3>(gtsam::Symbol('x', i + 1));
+    // t.emplace_back(i * delta_s + start_s);
+    // x.emplace_back(x1(0));
+    // v.emplace_back(x1(1));
+    // a.emplace_back(x1(2));
+    // reference_line.FrenetToState(t.back(), x1, &traj_state);
+    // traj_state.debug = x1;
+    // trajectory->emplace_back(traj_state);
 
-    for (int j = 0; j < inter_num; ++j) {
-      double tau = (j + 1) * delta_tau;
-      auto inter_x = GPInterpolator::Interpolate(x1, x2, kQc, delta_s, tau);
-      t.emplace_back(i * delta_s + tau + start_s);
-      x.emplace_back(inter_x(0));
-      v.emplace_back(inter_x(1));
-      a.emplace_back(inter_x(2));
-      reference_line.FrenetToState(t.back(), inter_x, &traj_state);
-      traj_state.debug = inter_x;
-      trajectory->emplace_back(traj_state);
-    }
+    // for (int j = 0; j < inter_num; ++j) {
+    //   double tau = (j + 1) * delta_tau;
+    //   auto inter_x = GPInterpolator::Interpolate(x1, x2, kQc, delta_s, tau);
+    //   t.emplace_back(i * delta_s + tau + start_s);
+    //   x.emplace_back(inter_x(0));
+    //   v.emplace_back(inter_x(1));
+    //   a.emplace_back(inter_x(2));
+    //   reference_line.FrenetToState(t.back(), inter_x, &traj_state);
+    //   traj_state.debug = inter_x;
+    //   trajectory->emplace_back(traj_state);
+    // }
+    gp_path_nodes->emplace_back(x1);
   }
-  reference_line.FrenetToCartesion(t, x, path);
+
+  for (double i = start_s; i <= start_s + length; i += 1.0) {
+    gp_path->GetState(i, &traj_state);
+    trajectory->emplace_back(traj_state);
+  }
 
   vector_Eigen<Eigen::Vector2d> points;
   for (int i = 0; i < x.size(); ++i) {

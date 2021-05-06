@@ -41,6 +41,7 @@ include_directories(
 add_subdirectory(gp)
 add_subdirectory(sdf)
 add_subdirectory(initializer)
+add_subdirectory(st_plan)
 # add_subdirectory(thirdparty/matplotplusplus)
 add_subdirectory(examples)
 
@@ -49,4 +50,10 @@ target_link_libraries(gp_planner
   gp_planner::gp
   gp_planner::sdf
   gp_planner::initializer
+  gp_planner::st_plan
 )
+
+add_executable(full_test_case
+  examples/full_test_case.cc
+)
+target_link_libraries(full_test_case gp_planner)

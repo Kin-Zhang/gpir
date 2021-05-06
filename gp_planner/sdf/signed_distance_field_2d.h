@@ -49,13 +49,22 @@ class SignedDistanceField2D {
 
   void UpdateSDF();
 
+  // * only calculate distance along y axis
+  void UpdateVerticalSDF();
+
   inline double SignedDistance(const Eigen::Vector2d& coord,
-                               Eigen::Vector2d* grad) const {
+                               Eigen::Vector2d* grad = nullptr) const {
     return esdf_.GetValueBilinear(coord, grad);
   }
 
  protected:
   void EuclideanDistanceTransform(
+      std::array<int, 2> dim,
+      std::function<bool(const int x, const int y)> is_occupied,
+      DistanceMap* output_map);
+
+  // * only perform column scan
+  void VerticalEuclideanDistanceTransform(
       std::array<int, 2> dim,
       std::function<bool(const int x, const int y)> is_occupied,
       DistanceMap* output_map);
@@ -80,8 +89,7 @@ inline void SignedDistanceField2D::set_resolution(const double map_resolution) {
   esdf_.set_resolution(std::array<double, 2>{map_resolution, map_resolution});
 }
 
-inline void SignedDistanceField2D::set_cell_num(
-    std::array<int, 2> cell_num) {
+inline void SignedDistanceField2D::set_cell_num(std::array<int, 2> cell_num) {
   occupancy_map_.set_cell_number(cell_num);
   esdf_.set_cell_number(cell_num);
 }
