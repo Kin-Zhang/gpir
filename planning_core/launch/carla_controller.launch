@@ -1,0 +1,9 @@
+<launch>
+
+<node pkg="planning_core" name="carla_controller" type="carla_controller" output="screen">
+  <param name="kp" value="0.8"/>
+  <param name="ki" value="0.07"/>
+  <param name="kd" value="0.1"/>
+</node>
+
+</launch>

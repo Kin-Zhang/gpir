@@ -45,7 +45,26 @@ bool CarlaMockPerception::UpdateMockPerceptionResult(
   Obstacle obstacle;
   const double stamp = objects_->header.stamp.toSec();
   for (const auto& object : objects_->objects) {
-    if (object.id == ego_id) continue;
+    // if (object.id == ego_id) continue;
+    if (object.id == ego_id) {
+      obstacle.set_id(1);
+      auto state = obstacle.mutable_state();
+      state->heading = tf::getYaw(object.pose.orientation);
+      Eigen::Vector2d pos(object.pose.position.x, object.pose.position.y);
+      Eigen::Vector2d tangent(std::cos(state->heading),
+                              std::sin(state->heading));
+      Eigen::Vector2d normal(-std::sin(state->heading),
+                             std::cos(state->heading));
+      state->position = pos + tangent * 10 + 4 * normal;
+      state->acceleration = 0.0;
+      state->velocity = 8.0;
+      obstacle.SetBoundingBox(object.shape.dimensions[0],
+                              object.shape.dimensions[1],
+                              object.shape.dimensions[2]);
+      obstacle.set_static(true);
+      obstacles->emplace_back(obstacle);
+      continue;
+    }
 
     obstacle.set_id(object.id);
     auto state = obstacle.mutable_state();
@@ -68,7 +87,7 @@ bool CarlaMockPerception::UpdateMockPerceptionResult(
   PlanningVisual::ObstacleToJskBBoxArray(*obstacles, &bbox_array);
   PlanningVisual::ObstacleInfoToMarkerArray(*obstacles, &markers);
   obstacles_pub_.publish(bbox_array);
-  obstacles_info_pub_.publish(markers);
+  // obstacles_info_pub_.publish(markers);
 
   return true;
 }

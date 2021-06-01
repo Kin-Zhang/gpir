@@ -3,11 +3,13 @@
 #include "gp_planner/gp_planner.h"
 
 #include <glog/logging.h>
+#include <jsk_recognition_msgs/BoundingBox.h>
 #include <visualization_msgs/MarkerArray.h>
 
 #include "common/smoothing/osqp_spline2d_solver.h"
 #include "common/utils/color_map.h"
 #include "gp_planner/gp/gp_path_optimizer.h"
+#include "gp_planner/st_plan/st_graph.h"
 #include "planning_core/planning_common/planning_visual.h"
 
 namespace planning {
@@ -84,6 +86,11 @@ void GPPlanner::PlanOnce(NavigationMap* navigation_map_) {
 
   navigation_map_->mutable_trajectory()->clear();
 
+  // delete this
+  start_state.debug(0) = 4;
+  start_state.position = static_obstacles_.front().state().position;
+
+  const double ref_v = navigation_map_->reference_speed();
   GPPath gp_path;
   if (!gp_path_optimizer.GenerateGPPath(reference_line, start_state, 90, proj.s,
                                         navigation_map_->mutable_trajectory(),
@@ -92,12 +99,29 @@ void GPPlanner::PlanOnce(NavigationMap* navigation_map_) {
     return;
   }
 
-  const double ref_v = navigation_map_->reference_speed();
-  auto trajectory = navigation_map_->mutable_trajectory();
-  for (size_t i = 0; i < trajectory->size(); ++i) {
-    (*trajectory)[i].velocity = ref_v;
-    (*trajectory)[i].acceleration = 0.0;
+  common::FrenetState frenet_state;
+  reference_line.ToFrenetState(start_state, &frenet_state);
+  frenet_state.s[1] = start_state.frenet_s[1];
+  frenet_state.s[2] = start_state.frenet_s[2];
+  StGraph st_graph(frenet_state.s);
+  LOG(INFO) << frenet_state.DebugString();
+  st_graph.SetReferenceSpeed(ref_v);
+  st_graph.BuildStGraph(dynamic_obstacles_, gp_path);
+  if (!st_graph.LocalTopSearch(13, nullptr)) {
+    return;
   }
+  if (!st_graph.OptimizeTest()) {
+    st_graph.VisualizeStGraph();
+    return;
+  }
+  st_graph.GenerateTrajectory(reference_line, gp_path,
+                              navigation_map_->mutable_trajectory());
+  // auto trajectory = navigation_map_->mutable_trajectory();
+  // for (size_t i = 0; i < trajectory->size(); ++i) {
+  //   (*trajectory)[i].velocity = ref_v;
+  //   (*trajectory)[i].acceleration = 0.0;
+  // }
+  // LOG(INFO) << navigation_map_->trajectory();
 
   // * visual
   visualization_msgs::MarkerArray markers;
@@ -108,7 +132,7 @@ void GPPlanner::PlanOnce(NavigationMap* navigation_map_) {
   line.id = 0;
   line.type = visualization_msgs::Marker::LINE_STRIP;
   line.action = visualization_msgs::Marker::MODIFY;
-  line.color = common::ColorMap::at(common::Color::kCyan).toRosMsg();
+  line.color = common::ColorMap::at(common::Color::kOrangeRed).toRosMsg();
   line.pose.orientation.w = 1;
   line.scale.x = line.scale.y = line.scale.z = 0.15;
 
@@ -131,6 +155,30 @@ void GPPlanner::PlanOnce(NavigationMap* navigation_map_) {
   }
   markers.markers.emplace_back(line);
   markers.markers.emplace_back(node);
+
+  // delete this
+  Eigen::Vector3d d;
+  common::State tmp;
+  int count = 2;
+  for (double i = gp_path.start_s() + 5; i < 100; i += 5) {
+    gp_path.GetInterpolateNode(i, &d);
+    reference_line.FrenetToState(i, d, &tmp);
+    visualization_msgs::Marker marker, marker_ego;
+    marker.id = count++;
+    marker_ego.id = count++;
+    if (count >= 5) {
+      PlanningVisual::GetPlannerBoxMarker(tmp.position, 2.16, 4.8, tmp.heading,
+                                          common::Color::kOrange, &marker);
+    } else {
+      PlanningVisual::GetPlannerBoxMarker(tmp.position, 2.16, 4.8, tmp.heading,
+                                          common::Color::kRoyalBlue, &marker);
+    }
+    auto ref = reference_line.GetFrenetReferncePoint(i - 10);
+    PlanningVisual::GetPlannerBoxMarker(ref.point, 2.16, 4.8, ref.theta,
+                                        common::Color::kGrey, &marker_ego);
+    markers.markers.emplace_back(marker);
+    markers.markers.emplace_back(marker_ego);
+  }
 
   trajectory_pub_.publish(markers);
 

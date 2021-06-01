@@ -104,8 +104,8 @@ bool GPPathOptimizer::GenerateGPPath(const ReferenceLine& reference_line,
   std::vector<std::vector<std::pair<double, double>>> boundaries;
   std::vector<double> seeds;
   seeds.emplace_back(s);
-  sdf_->mutable_occupancy_map()->SearchForVeticalBoundaries(seeds, &boundaries);
-  // sdf_->mutable_occupancy_map()->SearchForVeticalBoundaries(s_refs_,
+  sdf_->mutable_occupancy_map()->SearchForVerticalBoundaries(seeds, &boundaries);
+  // sdf_->mutable_occupancy_map()->SearchForVerticalBoundaries(s_refs_,
   //                                                           &boundaries);
   gtsam::Values init_values;
   std::vector<Eigen::Vector3d> resa, tmp;

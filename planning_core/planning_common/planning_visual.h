@@ -32,5 +32,10 @@ class PlanningVisual {
 
   static void GetTrafficConeMarker(const Eigen::Vector2d& pos, const int id,
                                    visualization_msgs::Marker* marker);
+
+  static void GetPlannerBoxMarker(const Eigen::Vector2d& pos,
+                                  const double width, const double length,
+                                  const double heading, common::Color color,
+                                  visualization_msgs::Marker* marker);
 };
 }  // namespace planning

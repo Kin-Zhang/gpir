@@ -9,16 +9,20 @@
 
 namespace planning {
 
-class RouteSequence : public std::vector<RouteSegment> {
+class RouteSequence : public std::deque<RouteSegment> {
  public:
   RouteSequence() = default;
 
   void Update(const Eigen::Vector2d& position);
+  void RemoveOldestRoute();
+  void AddRoute(const RouteSegment& route_segment);
 
   inline int current_index() const { return current_index_; }
   inline hdmap::LaneSegmentBehavior main_action() const;
   inline bool ApproachingDestination() { return approaching_destination_; }
   inline bool arrived() const { return arrived_; }
+  inline bool approaching() const {return approaching_destination_;}
+  void Reset();
 
  private:
   int num_of_segments_ = 0;
@@ -29,6 +33,6 @@ class RouteSequence : public std::vector<RouteSegment> {
 
 // inline
 inline hdmap::LaneSegmentBehavior RouteSequence::main_action() const {
-  return data()[current_index_].main_action();
+  return at(current_index_).main_action();
 }
 }  // namespace planning

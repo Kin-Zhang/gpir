@@ -17,6 +17,7 @@ struct State {
   double steer = 0.0;
   Eigen::Vector2d position;
   Eigen::Vector3d debug;
+  Eigen::Vector3d frenet_s;
 
   std::string DebugString() const {
     std::ostringstream os;

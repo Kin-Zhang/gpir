@@ -7,6 +7,8 @@
 #include <tf/tf.h>
 #include <visualization_msgs/MarkerArray.h>
 
+#include <random>
+
 #include "common/graph/dijkstra.hpp"
 #include "common/utils/color_map.h"
 #include "common/utils/contains.hpp"
@@ -65,6 +67,60 @@ bool NavigationMap::CreateTask(const Eigen::Vector2d& goal_pos,
   return true;
 }
 
+bool NavigationMap::RandomlyUpdateRoute() {
+  if (!route_sequence_) {
+    route_sequence_.reset(new RouteSequence());
+    int lane_id = hdmap::HdMap::NearestLane(data_frame_->state.position,
+                                            data_frame_->state.heading, false);
+    if (lane_id == 0) {
+      LOG(ERROR) << "Cannot find matched lane, update route failed";
+      return false;
+    }
+    AddLaneToRouteSequence(lane_id);
+    auto lane = hdmap::LaneMap::GetLane(lane_id);
+    int size = lane->next_lanes().size();
+    if (size > 0) {
+      int next_lane_id = lane->next_lanes()[RandomInt(size)];
+      AddLaneToRouteSequence(next_lane_id);
+    }
+  } else {
+    if (route_sequence_->approaching()) {
+      int lane_id = route_sequence_->back().id();
+      auto lane = hdmap::LaneMap::GetLane(lane_id);
+      int size = lane->next_lanes().size();
+      if (size > 0) {
+        int next_lane_id = lane->next_lanes()[RandomInt(size)];
+        route_sequence_->RemoveOldestRoute();
+        AddLaneToRouteSequence(next_lane_id);
+      }
+    } else if (route_sequence_->arrived()) {
+      return false;
+    }
+  }
+  return true;
+}
+
+int NavigationMap::RandomInt(const int size) {
+  std::random_device rd;   // obtain a random number from hardware
+  std::mt19937 gen(rd());  // seed the generator
+  std::uniform_int_distribution<> distr(0, size - 1);  // define the range
+  return distr(gen);
+}
+
+void NavigationMap::AddLaneToRouteSequence(const int lane_id) {
+  RouteSegment route_segment;
+  route_segment.set_id(lane_id);
+  route_segment.set_main_action(hdmap::LaneSegmentBehavior::kKeep);
+  auto lane = hdmap::LaneMap::GetLane(route_segment.id());
+  if (lane->HasLeftNeighbor())
+    route_segment.add_alternative_actions(
+        hdmap::LaneSegmentBehavior::kLeftChange);
+  if (lane->HasRightNeighbor())
+    route_segment.add_alternative_actions(
+        hdmap::LaneSegmentBehavior::kRightChange);
+  route_sequence_->AddRoute(route_segment);
+}
+
 bool NavigationMap::UpdateReferenceLine() {
   std::vector<hdmap::WayPoint> waypoints;
   GetReferenceWaypoints(data_frame_->state, 100, 20, &waypoints,
@@ -73,12 +129,11 @@ bool NavigationMap::UpdateReferenceLine() {
     std::cout << waypoints << std::endl;
     reference_line_.print();
     PlotUtils::PlotWayPoints(waypoints);
-    LOG(FATAL) << "wtf1";
     return false;
   }
 
   // * update reference speed
-  const double lat_acc_limit = 1.5;
+  const double lat_acc_limit = 2.0;
   double kappa, dkappa = 0.0;
   // const double forward_duration = refernce_speed_ / 3.0;
   const double forward_length = std::min(
@@ -87,7 +142,7 @@ bool NavigationMap::UpdateReferenceLine() {
       reference_line_.length());
   // const double forward_length = std::min(50.0, reference_line_.length());
   const double step_length = 0.15;
-  refernce_speed_ = 18.0;
+  refernce_speed_ = 12.0;
   for (double s = 0; s <= forward_length; s += step_length) {
     reference_line_.GetCurvature(s, &kappa, &dkappa);
     refernce_speed_ =
@@ -378,7 +433,7 @@ void NavigationMap::PublishReferenceLine() {
   maker.scale.x = 0.5;
   maker.scale.y = 0.1;
   maker.scale.z = 0.1;
-  maker.color = common::ColorMap::at(common::Color::kMagenta, 0.3).toRosMsg();
+  maker.color = common::ColorMap::at(common::Color::kRoyalBlue, 0.3).toRosMsg();
   maker.pose.orientation.w = 1;
 
   for (int i = 0; i < num_of_points; ++i) {

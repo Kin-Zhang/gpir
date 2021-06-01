@@ -69,13 +69,13 @@ void PlanningVisual::ObstacleInfoToMarkerArray(
 
     marker_info.type = visualization_msgs::Marker::TEXT_VIEW_FACING;
     marker_info.action = visualization_msgs::Marker::MODIFY;
-    marker_info.color = ColorMap::at(Color::kWhite).toRosMsg();
-    marker_info.scale.z = 0.5;
+    marker_info.color = ColorMap::at(Color::kBlack).toRosMsg();
+    marker_info.scale.z = 1;
     marker_info.text = "ID: " + std::to_string(id) + "\n" +
                        common::to_string_with_precision(state.velocity, 2) +
                        " m/s";
     CommonVisual::PositionToPose(state.position, &marker_info.pose,
-                                 obstacle.height() * 2.0);
+                                 obstacle.height() * 2.5);
 
     markers->markers.emplace_back(marker_info);
   }
@@ -101,5 +101,40 @@ void PlanningVisual::GetTrafficConeMarker(const Eigen::Vector2d& pos,
   marker->pose.position.z = 0.1;
   tf::Quaternion q(0.0, -0.7071, -0.7071, 0.0);
   tf::quaternionTFToMsg(q, marker->pose.orientation);
+}
+
+void PlanningVisual::GetPlannerBoxMarker(const Eigen::Vector2d& pos,
+                                         const double width,
+                                         const double length,
+                                         const double heading,
+                                         common::Color color,
+                                         visualization_msgs::Marker* marker) {
+  marker->header.frame_id = "map";
+  marker->header.stamp = ros::Time::now();
+  marker->type = visualization_msgs::Marker::LINE_LIST;
+  marker->action = visualization_msgs::Marker::MODIFY;
+  marker->color = ColorMap::at(color).toRosMsg();
+  marker->pose.orientation.w = 1.0;
+  marker->scale.x = marker->scale.y = marker->scale.z = 0.15;
+
+  const double half_length = length / 2.0 - 0.1;
+  const double half_width = width / 2.0 + 0.1;
+
+  Eigen::Vector2d tangent(std::cos(heading), std::sin(heading));
+  Eigen::Vector2d normal(-std::sin(heading), std::cos(heading));
+  vector_Eigen2d corners{pos + half_length * tangent + half_width * normal,
+                         pos + half_length * tangent - half_width * normal,
+                         pos - half_length * tangent - half_width * normal,
+                         pos - half_length * tangent + half_width * normal};
+  geometry_msgs::Point point;
+  for (int i = 0; i < 4; ++i) {
+    for (int j = i; j < i + 2; ++j) {
+      int idx = j % 4;
+      point.x = corners[idx].x();
+      point.y = corners[idx].y();
+      point.z = 0.2;
+      marker->points.emplace_back(point);
+    }
+  }
 }
 }  // namespace planning

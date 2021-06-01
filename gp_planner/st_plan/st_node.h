@@ -15,7 +15,8 @@ struct StNodeWeights {
 class StNode {
  public:
   StNode() = default;
-  StNode(const double s, const double v) : s(s), v(v) {}
+  StNode(const double s, const double v, const double a = 0.0)
+      : s(s), v(v), a(a) {}
 
   static void SetReferenceSpeed(const double ref_v) { ref_v_ = ref_v; }
   static void SetWeights(const StNodeWeights& weights) { weights_ = weights; }

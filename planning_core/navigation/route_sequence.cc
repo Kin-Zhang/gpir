@@ -7,14 +7,18 @@
 namespace planning {
 
 void RouteSequence::Update(const Eigen::Vector2d& position) {
+  if (empty()) return;
   constexpr double kEpsilon = 0.1;
-  auto current_lane = hdmap::LaneMap::GetLane(data()[current_index_].id());
+  auto current_lane = hdmap::LaneMap::GetLane(at(current_index_).id());
   if (main_action() == hdmap::LaneSegmentBehavior::kKeep) {
     if (current_lane->GetArcLength(position) >
         current_lane->length() - kEpsilon) {
       if (current_index_ == size() - 1) {
         arrived_ = true;
       } else {
+        if (current_index_ == size() - 2) {
+          approaching_destination_ = true;
+        }
         ++current_index_;
       }
     }
@@ -26,4 +30,22 @@ void RouteSequence::Update(const Eigen::Vector2d& position) {
   if (current_index_ == size() - 1) approaching_destination_ = true;
 }
 
+void RouteSequence::RemoveOldestRoute() {
+  pop_front();
+  --current_index_;
+}
+
+void RouteSequence::AddRoute(const RouteSegment& route_segment) {
+  push_back(route_segment);
+  arrived_ = false;
+  approaching_destination_ = false;
+}
+
+void RouteSequence::Reset() {
+  clear();
+  current_index_ = 0;
+  num_of_segments_ = 0;
+  arrived_ = false;
+  approaching_destination_ = false;
+}
 }  // namespace planning

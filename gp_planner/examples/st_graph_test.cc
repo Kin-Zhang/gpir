@@ -40,7 +40,7 @@ int main(int argc, char const* argv[]) {
   TOC("sdf");
   // std::vector<double> t_sample{0, 1, 2, 3, 4, 5, 6, 7, 8};
   // std::vector<std::vector<std::pair<double, double>>> boundaries;
-  // om.SearchForVeticalBoundaries(t_sample, &boundaries);
+  // om.SearchForVerticalBoundaries(t_sample, &boundaries);
 
   std::vector<min_jerk::Trajectory> trajs;
 

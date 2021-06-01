@@ -20,6 +20,7 @@ void PlanningCore::Init() {
   load_param &= node.getParam("simulator", simulator);
   load_param &= node.getParam("town", town);
   load_param &= node.getParam("map_path", map_path);
+  load_param &= node.getParam("random_drive_mode", random_drive_mode_);
   if (!load_param) LOG(FATAL) << "fail to init param";
 
   // init hdmap
@@ -61,19 +62,33 @@ void PlanningCore::Run(const ros::TimerEvent&) {
 
   mock_predictor_->GeneratePrediction(&data_frame_->obstacles);
   navigation_map_.Update(data_frame_);
-  {
+
+  if (!random_drive_mode_) {
+    // point-to-point mode
     std::lock_guard<std::mutex> lock(route_mutex_);
     if (has_new_route_) {
       navigation_map_.CreateTask(route_goal_);
       has_new_route_ = false;
     }
-  }
-
-  if (!navigation_map_.HasActiveTask()) {
-    LOG_EVERY_N(INFO, 20) << "no active task";
-    navigation_map_.mutable_trajectory()->clear();
-    simulator_->SetTrajectory(navigation_map_.trajectory());
-    return;
+    if (!navigation_map_.HasActiveTask()) {
+      LOG_EVERY_N(INFO, 20) << "no active task";
+      navigation_map_.mutable_trajectory()->clear();
+      simulator_->SetTrajectory(navigation_map_.trajectory());
+      return;
+    }
+  } else {
+    // random driving mode
+    if (has_new_route_) {
+      if (!navigation_map_.RandomlyUpdateRoute()) {
+        navigation_map_.mutable_trajectory()->clear();
+        simulator_->SetTrajectory(navigation_map_.trajectory());
+        return;
+      }
+    } else {
+      navigation_map_.mutable_trajectory()->clear();
+      simulator_->SetTrajectory(navigation_map_.trajectory());
+      return;
+    }
   }
 
   navigation_map_.UpdateReferenceLine();

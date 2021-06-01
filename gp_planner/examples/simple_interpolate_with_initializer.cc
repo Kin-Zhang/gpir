@@ -105,7 +105,7 @@ int main(int argc, char** argv) {
 
   auto tt0 = std::chrono::high_resolution_clock::now();
   std::vector<std::vector<std::pair<double, double>>> boundaries;
-  sdf->mutable_occupancy_map()->SearchForVeticalBoundaries(x_coords,
+  sdf->mutable_occupancy_map()->SearchForVerticalBoundaries(x_coords,
                                                            &boundaries);
 
   std::cout << boundaries.size() << std::endl;

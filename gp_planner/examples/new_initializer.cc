@@ -123,7 +123,7 @@ int main(int argc, char** argv) {
   std::vector<double> seeds;
   seeds.emplace_back(22.5);
   seeds.emplace_back(42.5);
-  sdf->mutable_occupancy_map()->SearchForVeticalBoundaries(seeds, &boundaries);
+  sdf->mutable_occupancy_map()->SearchForVerticalBoundaries(seeds, &boundaries);
 
   LOG(INFO) << 1;
   Eigen::MatrixXd route(1, 2);

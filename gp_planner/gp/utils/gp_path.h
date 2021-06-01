@@ -24,9 +24,6 @@ class GPPath {
   inline double start_s() const { return start_s_; }
   inline vector_Eigen<Eigen::Vector3d>* mutable_nodes() { return &nodes_; }
 
- private:
-  void GetEgoBox(const common::State& ego_state, common::Box2D* ego_box) const;
-
   inline void GetInterpolateNode(const double s, Eigen::Vector3d* node) const {
     int index = std::max(
         std::min(static_cast<int>((s - start_s_) / delta_s_), num_nodes_ - 2),
@@ -34,6 +31,9 @@ class GPPath {
     interpolator_.Interpolate(nodes_[index], nodes_[index + 1],
                               s - start_s_ - index * delta_s_, node);
   }
+
+ private:
+  void GetEgoBox(const common::State& ego_state, common::Box2D* ego_box) const;
 
  private:
   int num_nodes_ = 0;

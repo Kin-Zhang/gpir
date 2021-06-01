@@ -331,7 +331,7 @@ SLPair Lane::GetProjection(const Eigen::Vector2d& point) {
 SLPair Lane::GetProjectionAndBoundary(const Eigen::Vector2d& point,
                                       std::pair<double, double>* boundary) {
   int min_index = GetNearestionPointIndex(point);
-  *boundary = lane_boundary_[min_index];
+  *boundary = std::make_pair<double, double>(-width_ / 2, width_ / 2);
   Eigen::Vector2d vec = point - way_points_[min_index].point;
   const double cos = std::cos(way_points_[min_index].heading);
   const double sin = std::sin(way_points_[min_index].heading);

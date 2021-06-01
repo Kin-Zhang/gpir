@@ -28,6 +28,8 @@ class NavigationMap {
 
   bool HasActiveTask();
 
+  bool RandomlyUpdateRoute();
+
   bool CreateTask(const geometry_msgs::PoseStamped& goal_pose);
 
   bool CreateTask(const Eigen::Vector2d& goal_pos, const double goal_heading);
@@ -55,6 +57,9 @@ class NavigationMap {
   common::Trajectory* mutable_trajectory() { return &trajectory_; }
 
  private:
+  int RandomInt(const int size);
+  void AddLaneToRouteSequence(const int lane_id);
+
   void PublishReferenceLine();
   void PublishRouteSequence();
 

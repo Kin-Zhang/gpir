@@ -42,7 +42,7 @@ class GPPlanner : public Planner {
 
   std::vector<Obstacle> static_obstacles_;
   std::vector<Obstacle> dynamic_obstacles_;
-  vector_Eigen<Eigen::Vector2d> virtual_obstacles_;
+  vector_Eigen2d virtual_obstacles_;
   std::shared_ptr<SignedDistanceField2D> sdf_;
 };
 

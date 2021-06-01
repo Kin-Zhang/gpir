@@ -8,11 +8,12 @@ namespace planning {
 
 class RouteSegment {
  public:
-  RouteSegment();
+  RouteSegment() = default;
   RouteSegment(const hdmap::LaneSegment& lane_segment)
       : id_(lane_segment.id), length_(lane_segment.length) {}
 
   inline hdmap::LaneId id() const { return id_; }
+  inline void set_id(const int id) { id_ = id; }
   inline hdmap::LaneSegmentBehavior main_action() const;
   inline const std::vector<hdmap::LaneSegmentBehavior>& alternative_actions()
       const;

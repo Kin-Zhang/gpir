@@ -76,9 +76,9 @@ int main(int argc, char const* argv[]) {
   auto future_points2 = leading_vehicle2.mutable_prediction();
   constexpr double inital_distance = 30;
   constexpr double leading_v = 8.0;
-  constexpr double leading_v2 = 5.0;
+  constexpr double leading_v2 = 8.0;
   constexpr double initial_y = 0.0;
-  constexpr double initial_y2 = .0;
+  constexpr double initial_y2 = 4.0;
   common::State future_state;
   for (double t = 0.0; t < 8.0; t += 0.2) {
     future_state.position =
@@ -87,14 +87,14 @@ int main(int argc, char const* argv[]) {
     future_state.stamp = t;
     future_points->emplace_back(future_state);
     future_state.position =
-        Eigen::Vector2d(50 + leading_v2 * t, initial_y2 * (8.0 - t) / 8.0);
+        Eigen::Vector2d(20 + leading_v2 * t, initial_y2 * (8.0 - t) / 8.0);
     future_points2->emplace_back(future_state);
   }
   leading_vehicle.SetBoundingBox(4.7, 2.1, 1.4);
   leading_vehicle.set_static(false);
   leading_vehicle2.SetBoundingBox(4.7, 2.1, 1.4);
   leading_vehicle2.set_static(false);
-  dynamic_obstacle.emplace_back(leading_vehicle);
+  // dynamic_obstacle.emplace_back(leading_vehicle);
   dynamic_obstacle.emplace_back(leading_vehicle2);
 
   LOG(INFO) << "obstacle ok";
@@ -103,9 +103,16 @@ int main(int argc, char const* argv[]) {
   st_graph.SetInitialState(Eigen::Vector3d(initial_state.position.x(),
                                            initial_state.velocity,
                                            initial_state.acceleration));
+  st_graph.SetReferenceSpeed(10);
   st_graph.BuildStGraph(dynamic_obstacle, gp_path);
-  st_graph.LocalTopSearch(13);
+  std::vector<StNode> st_nodes;
+  st_graph.LocalTopSearch(13, &st_nodes);
+  st_graph.OptimizeTest();
+  common::Trajectory traj;
+  st_graph.GenerateTrajectory(reference_line, gp_path, &traj);
   st_graph.VisualizeStGraph();
+
+  st_graph.SaveSnapShot("/home/udi/research/ral2021_gpir/data");
 
   return 0;
 }
