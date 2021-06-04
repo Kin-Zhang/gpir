@@ -91,6 +91,13 @@ void PlanningCore::Run(const ros::TimerEvent&) {
     }
   }
 
+  if (suggest_lane_change_) {
+    if (navigation_map_.SuggestLaneChange(
+            hdmap::LaneSegmentBehavior::kLeftChange)) {
+      suggest_lane_change_ = false;
+    }
+  }
+
   navigation_map_.UpdateReferenceLine();
   TIC;
   planner_->PlanOnce(&navigation_map_);

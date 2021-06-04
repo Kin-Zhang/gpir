@@ -5,7 +5,6 @@
 #include <Eigen/Core>
 
 namespace common {
-
 struct State {
   double s = 0.0;
   double stamp = 0.0;

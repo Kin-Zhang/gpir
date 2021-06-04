@@ -18,7 +18,10 @@ class GPPlanner : public Planner {
 
  private:
   bool ProcessObstacles(const std::vector<Obstacle>& raw_obstacles,
-                        const ReferenceLine& reference_line);
+                        const ReferenceLine& reference_line,
+                        std::vector<Obstacle>* cirtical_obstacles);
+
+  void UpdateVirtualObstacles();
 
   void VisualizeCriticalObstacle();
   void VisualizeVirtualObstacle();
@@ -43,7 +46,8 @@ class GPPlanner : public Planner {
   std::vector<Obstacle> static_obstacles_;
   std::vector<Obstacle> dynamic_obstacles_;
   vector_Eigen2d virtual_obstacles_;
-  std::shared_ptr<SignedDistanceField2D> sdf_;
+
+  hdmap::LaneSegmentBehavior last_behavior_ = hdmap::LaneSegmentBehavior::kKeep;
 };
 
 }  // namespace planning

@@ -30,6 +30,8 @@ class NavigationMap {
 
   bool RandomlyUpdateRoute();
 
+  bool SuggestLaneChange(const hdmap::LaneSegmentBehavior type);
+
   bool CreateTask(const geometry_msgs::PoseStamped& goal_pose);
 
   bool CreateTask(const Eigen::Vector2d& goal_pos, const double goal_heading);
@@ -39,15 +41,25 @@ class NavigationMap {
   //  private:
   bool SelectRouteSequence(const common::State& state);
 
-  void GetReferenceWaypoints(const common::State& state, const double forward,
-                             const double backward,
+  void GetReferenceWaypoints(const common::State& state,
+                             const RouteSequence& route_sequence,
+                             const double forward, const double backward,
                              std::vector<hdmap::WayPoint>* waypoints,
                              std::vector<int>* lane_id_list);
+
+  void GenerateWaypoints(const common::State& state, const double forward,
+                         const double backward, int target_lane,
+                         int forward_lane_hint, int backward_lane_hint,
+                         std::vector<hdmap::WayPoint>* waypoints,
+                         std::vector<int>* lane_id_list);
 
   Eigen::Vector2d GetPoint(const double s);
 
   const common::State& ego_state() const { return data_frame_->state; }
   const ReferenceLine& reference_line() const { return reference_line_; }
+  const std::vector<ReferenceLine>& reference_lines() const {
+    return reference_lines_;
+  }
   inline const double reference_speed() const { return refernce_speed_; }
   const std::vector<Obstacle>& obstacles() const {
     return data_frame_->obstacles;
@@ -57,8 +69,11 @@ class NavigationMap {
   common::Trajectory* mutable_trajectory() { return &trajectory_; }
 
  private:
-  int RandomInt(const int size);
-  void AddLaneToRouteSequence(const int lane_id);
+  std::vector<RouteSequence*> GetRouteCandidate();
+  bool UpdateRouteSequence(RouteSequence* route_sequence);
+  void AddLaneToRouteSequence(
+      const int lane_id, RouteSequence* route_sequence,
+      hdmap::LaneSegmentBehavior type = hdmap::LaneSegmentBehavior::kKeep);
 
   void PublishReferenceLine();
   void PublishRouteSequence();
@@ -69,10 +84,14 @@ class NavigationMap {
 
   double refernce_speed_ = 0.0;
   ReferenceLine reference_line_;
+  std::vector<ReferenceLine> reference_lines_;
   common::Trajectory trajectory_;
+
+  bool in_lane_changing_ = false;
 
   std::shared_ptr<DataFrame> data_frame_ = nullptr;
   std::unique_ptr<hdmap::FullRoute> full_route_ = nullptr;
   std::unique_ptr<RouteSequence> route_sequence_ = nullptr;
+  std::unique_ptr<RouteSequence> route_sequence_lane_change_ = nullptr;
 };
 }  // namespace planning

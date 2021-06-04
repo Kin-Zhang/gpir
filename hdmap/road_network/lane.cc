@@ -18,12 +18,28 @@ Lane::Lane(const ::ad::map::lane::Lane::ConstPtr admap_lane)
       width_(admap_lane->width),
       admap_lane_(admap_lane) {
   for (const auto& contact_lane : admap_lane_->contactLanes) {
+    auto contact_lane_direction =
+        ad::map::lane::getLane(contact_lane.toLane).direction;
     switch (contact_lane.location) {
       case ad::map::lane::ContactLocation::LEFT:
-        AddNeighborLane(contact_lane.toLane, LaneNeighborType::kLeft);
+        if (admap_lane_->direction == contact_lane_direction) {
+          if (admap_lane_->direction ==
+              ad::map::lane::LaneDirection::POSITIVE) {
+            AddNeighborLane(contact_lane.toLane, LaneNeighborType::kLeft);
+          } else {
+            AddNeighborLane(contact_lane.toLane, LaneNeighborType::kRight);
+          }
+        }
         break;
       case ad::map::lane::ContactLocation::RIGHT:
-        AddNeighborLane(contact_lane.toLane, LaneNeighborType::kRight);
+        if (admap_lane_->direction == contact_lane_direction) {
+          if (admap_lane_->direction ==
+              ad::map::lane::LaneDirection::POSITIVE) {
+            AddNeighborLane(contact_lane.toLane, LaneNeighborType::kRight);
+          } else {
+            AddNeighborLane(contact_lane.toLane, LaneNeighborType::kLeft);
+          }
+        }
         break;
       case ad::map::lane::ContactLocation::SUCCESSOR:
         if (admap_lane_->direction == ad::map::lane::LaneDirection::POSITIVE) {

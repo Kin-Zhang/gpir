@@ -36,6 +36,8 @@ class PlanningCore {
   ros::Subscriber route_target_sub_;
   geometry_msgs::PoseStamped route_goal_;
 
+  bool suggest_lane_change_ = true;
+
   NavigationMap navigation_map_;
   std::shared_ptr<DataFrame> data_frame_;
   std::unique_ptr<simulation::SimulatorAdapter> simulator_;

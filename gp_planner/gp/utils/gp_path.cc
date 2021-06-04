@@ -41,7 +41,7 @@ bool GPPath::HasOverlapWith(const common::State& state, const double length,
     return false;
   }
 
-  constexpr double kStepLength = 0.5;
+  constexpr double kStepLength = 1;
   double forward_s = inital_s + kStepLength;
   double backward_s = inital_s - kStepLength;
 

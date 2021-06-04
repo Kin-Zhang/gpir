@@ -24,6 +24,7 @@ void StGraph::BuildStGraph(const std::vector<Obstacle>& dynamic_obstacles,
   int size = dynamic_obstacles.size();
   st_block_segments_.resize(size);
 
+  LOG(INFO) << "projection size: " << size;
   omp_set_num_threads(size);
   {
 #pragma omp parallel for
@@ -48,7 +49,6 @@ void StGraph::BuildStGraph(const std::vector<Obstacle>& dynamic_obstacles,
     for (const auto& st_points : st_block_segment) {
       if (st_points.empty()) continue;
       if (st_points.size() == 1) {
-        corners.clear();
         corners[0] = Eigen::Vector2d(st_points[0].t, st_points[0].s_l);
         corners[1] = Eigen::Vector2d(st_points[0].t, st_points[0].s_u);
         corners[2] = Eigen::Vector2d(st_points[0].t + 0.1, st_points[0].s_u);
@@ -57,11 +57,10 @@ void StGraph::BuildStGraph(const std::vector<Obstacle>& dynamic_obstacles,
         continue;
       }
       for (size_t i = 0; i < st_points.size() - 1; ++i) {
-        corners.clear();
-        corners.emplace_back(st_points[i].t, st_points[i].s_l);
-        corners.emplace_back(st_points[i].t, st_points[i].s_u);
-        corners.emplace_back(st_points[i + 1].t, st_points[i + 1].s_u);
-        corners.emplace_back(st_points[i + 1].t, st_points[i + 1].s_l);
+        corners[0] = Eigen::Vector2d(st_points[i].t, st_points[i].s_l);
+        corners[1] = Eigen::Vector2d(st_points[i].t, st_points[i].s_u);
+        corners[2] = Eigen::Vector2d(st_points[i + 1].t, st_points[i + 1].s_u);
+        corners[3] = Eigen::Vector2d(st_points[i + 1].t, st_points[i + 1].s_l);
         grid_map.FillConvexPoly(corners);
       }
     }

@@ -17,11 +17,13 @@ class RouteSequence : public std::deque<RouteSegment> {
   void RemoveOldestRoute();
   void AddRoute(const RouteSegment& route_segment);
 
+  inline const RouteSegment& current_route() { return at(current_index_); }
+  inline const RouteSegment& next_route() { return at(current_index_ + 1); }
   inline int current_index() const { return current_index_; }
   inline hdmap::LaneSegmentBehavior main_action() const;
   inline bool ApproachingDestination() { return approaching_destination_; }
   inline bool arrived() const { return arrived_; }
-  inline bool approaching() const {return approaching_destination_;}
+  inline bool approaching() const { return approaching_destination_; }
   void Reset();
 
  private:

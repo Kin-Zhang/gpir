@@ -21,7 +21,7 @@ class GPPathOptimizer {
   void set_sdf(std::shared_ptr<SignedDistanceField2D> sdf) { sdf_ = sdf; }
 
   bool GenerateGPPath(const ReferenceLine& reference_line,
-                      const common::State& state, const double length,
+                      const common::FrenetState& frenet_state, const double length,
                       const double s, common::Trajectory* trajectory,
                       GPPath* gp_path);
 

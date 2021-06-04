@@ -3,6 +3,7 @@
 #include "common/utils/math.h"
 
 #include <cmath>
+#include <random>
 
 namespace common {
 
@@ -32,6 +33,13 @@ double InterpolateAngle(const double a0, const double t0, const double a1,
   const double r = (t - t0) / (t1 - t0);
   const double a = a0_n + d * r;
   return NormalizeAngle(a);
+}
+
+int RandomInt(const int size) {
+  std::random_device rd;   // obtain a random number from hardware
+  std::mt19937 gen(rd());  // seed the generator
+  std::uniform_int_distribution<> distr(0, size - 1);  // define the range
+  return distr(gen);
 }
 
 double Curvature(const double dx, const double d2x, const double dy,
