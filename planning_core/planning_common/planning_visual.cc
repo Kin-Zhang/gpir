@@ -13,6 +13,15 @@ using common::Color;
 using common::ColorMap;
 using common::CommonVisual;
 
+void PlanningVisual::SetScaleAndColor(const std::array<double, 3>& scale,
+                                      common::Color color,
+                                      visualization_msgs::Marker* marker) {
+  marker->scale.x = scale[0];
+  marker->scale.y = scale[1];
+  marker->scale.z = scale[2];
+  marker->color = common::ColorMap::at(color).toRosMsg();
+}
+
 void PlanningVisual::BBoxToSolidCubeMarker(const common::Box2D& bbox,
                                            const Color color,
                                            visualization_msgs::Marker* marker) {

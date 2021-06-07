@@ -41,7 +41,6 @@ void MockPredictor::UpdateVehicleLaneMap(
           sl_pair.second < lane_boundary.second ||
           std::fabs(common::NormalizeAngle(state.heading - waypoint.heading) >
                     kAngleThreshold)) {
-        LOG(WARNING) << "rematch lane";
         vehicle_lane_map_[id] =
             hdmap::HdMap::NearestLane(state.position, state.heading, false);
         continue;

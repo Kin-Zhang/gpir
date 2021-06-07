@@ -14,6 +14,10 @@ namespace jsk_msgs = jsk_recognition_msgs;
 
 class PlanningVisual {
  public:
+  static void SetScaleAndColor(const std::array<double, 3>& scale,
+                               common::Color,
+                               visualization_msgs::Marker* marker);
+
   static void BBoxToSolidCubeMarker(const common::Box2D& bbox,
                                     common::Color color,
                                     visualization_msgs::Marker* maker);

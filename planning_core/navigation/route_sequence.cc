@@ -23,9 +23,24 @@ void RouteSequence::Update(const Eigen::Vector2d& position) {
   }
 }
 
+bool RouteSequence::IsWithInLane(const Eigen::Vector2d position) {
+  auto current_lane = hdmap::LaneMap::GetLane(at(current_index_).id());
+  auto proj = current_lane->GetProjection(position);
+  if (std::fabs(proj.second) <= 0.3)
+    return true;
+  else
+    return false;
+}
+
 void RouteSequence::RemoveOldestRoute() {
   pop_front();
   --current_index_;
+}
+
+void RouteSequence::ChangeMainAction(const hdmap::LaneSegmentBehavior type) {
+  for (auto it = begin(); it < end(); ++it) {
+    it->set_main_action(type);
+  }
 }
 
 void RouteSequence::AddRoute(const RouteSegment& route_segment) {

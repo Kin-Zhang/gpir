@@ -44,6 +44,7 @@ void PlanningCore::Init() {
   data_frame_ = std::make_shared<DataFrame>();
   route_target_sub_ = node.subscribe("/move_base_simple/goal", 10,
                                      &PlanningCore::NewRouteCallBack, this);
+  joy_sub_ = node.subscribe("/joy", 10, &PlanningCore::JoyCallBack, this);
 
   // init predictor
   mock_predictor_ = std::make_unique<ConstVelPredictor>(6, 0.2);
@@ -93,8 +94,8 @@ void PlanningCore::Run(const ros::TimerEvent&) {
 
   if (suggest_lane_change_) {
     if (navigation_map_.SuggestLaneChange(
-            hdmap::LaneSegmentBehavior::kLeftChange)) {
-      suggest_lane_change_ = false;
+            static_cast<hdmap::LaneSegmentBehavior>(suggest_lane_change_))) {
+      suggest_lane_change_ = 0;
     }
   }
 
@@ -109,6 +110,20 @@ void PlanningCore::NewRouteCallBack(const geometry_msgs::PoseStamped& goal) {
   std::lock_guard<std::mutex> lock(route_mutex_);
   route_goal_ = goal;
   has_new_route_ = true;
+}
+
+void PlanningCore::JoyCallBack(const sensor_msgs::Joy& joy) {
+  if (joy.buttons[2] == 1) {
+    LOG(INFO) << "Suggest left lane change by joy";
+    suggest_lane_change_ = 1;
+  } else if (joy.buttons[1] == 1) {
+    LOG(INFO) << "Suggest right lane change by joy";
+    suggest_lane_change_ = 2;
+  } else if (joy.buttons[3] == 1) {
+    navigation_map_.AdjustReferenceSpeed(1);
+  } else if (joy.buttons[0] == 1) {
+    navigation_map_.AdjustReferenceSpeed(-1);
+  }
 }
 
 bool PlanningCore::UpdateDataFrame() {

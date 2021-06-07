@@ -93,6 +93,7 @@ bool NavigationMap::RandomlyUpdateRoute() {
       result &= UpdateRouteSequence(route);
     }
     if (!result) return false;
+    UpdateLaneChangeStatus();
   }
   return true;
 }
@@ -161,7 +162,42 @@ bool NavigationMap::SuggestLaneChange(const hdmap::LaneSegmentBehavior type) {
                          route_sequence_lane_change_.get(), type);
   AddLaneToRouteSequence(route_sequence_->next_route().neighbor_id(type),
                          route_sequence_lane_change_.get(), type);
+  lc_status_ = LCStatus::kTryLaneChange;
+  lc_timmer_ = common::Timer(3000);
   return true;
+}
+
+void NavigationMap::UpdateLaneChangeStatus() {
+  if (lc_status_ == LCStatus::kTryLaneChange) {
+    if (lc_timmer_.timeout()) {
+      LOG(WARNING) << "Give up lane change";
+      route_sequence_lane_change_.reset(nullptr);
+      lc_status_ = LCStatus::kIdle;
+    }
+  } else if (lc_status_ == LCStatus::kLaneChanging) {
+    if (planner_lc_ok_) {
+      if (route_sequence_lane_change_->IsWithInLane(
+              data_frame_->state.position)) {
+        route_sequence_ = std::move(route_sequence_lane_change_);
+        route_sequence_->ChangeMainAction(hdmap::LaneSegmentBehavior::kKeep);
+        route_sequence_lane_change_.reset(nullptr);
+        lc_status_ = LCStatus::kIdle;
+      }
+    } else {
+      LOG(WARNING) << "Lane Change Canceled";
+      route_sequence_lane_change_.reset(nullptr);
+      lc_status_ = LCStatus::kIdle;
+    }
+  }
+}
+
+void NavigationMap::SetPlannerLCFeedback(bool is_planner_lc_ok) {
+  planner_lc_ok_ = is_planner_lc_ok;
+  if (is_planner_lc_ok) {
+    if (lc_status_ == LCStatus::kTryLaneChange) {
+      lc_status_ = LCStatus::kLaneChanging;
+    }
+  }
 }
 
 bool NavigationMap::UpdateReferenceLine() {
@@ -171,7 +207,7 @@ bool NavigationMap::UpdateReferenceLine() {
 
   int count = 0;
   for (const auto& route : route_candidate) {
-    LOG(INFO) << "Route: " << count++;
+    // LOG(INFO) << "Route: " << count++;
     reference_lines_.emplace_back();
     auto ref_line = &reference_lines_.back();
     GetReferenceWaypoints(data_frame_->state, *route, 100, 20, &waypoints,
@@ -190,7 +226,7 @@ bool NavigationMap::UpdateReferenceLine() {
       reference_lines_.back().length());
   // const double forward_length = std::min(50.0, reference_line_.length());
   const double step_length = 0.15;
-  refernce_speed_ = 12.0;
+  refernce_speed_ = 15.0 + adjust_speed_;
   for (double s = 0; s <= forward_length; s += step_length) {
     reference_lines_.back().GetCurvature(s, &kappa, &dkappa);
     refernce_speed_ =
@@ -285,7 +321,7 @@ void NavigationMap::GetReferenceWaypoints(
 
   int index = route_sequence.current_index();
   std::deque<std::vector<hdmap::WayPoint>> waypoints_segments;
-  LOG(INFO) << "index: " << index << ", size: " << route_sequence.size();
+  // LOG(INFO) << "index: " << index << ", size: " << route_sequence.size();
 
   int target_index = index;
   hdmap::LaneId target_lane = route_sequence.at(index).id();
@@ -347,7 +383,7 @@ void NavigationMap::GetReferenceWaypoints(
   // * backward search
   current_lane = init_lane;
   current_length = std::max(init_length, 0.0);
-  LOG(INFO) << "init_length: " << current_length;
+  // LOG(INFO) << "init_length: " << current_length;
   int backward_index = target_index;
   double backward_remain = backward;
   while (true) {
@@ -391,7 +427,7 @@ void NavigationMap::GetReferenceWaypoints(
 
   // * combine waypoints segments into one
   waypoints->clear();
-  LOG(INFO) << "size: " << waypoints_segments.size();
+  // LOG(INFO) << "size: " << waypoints_segments.size();
   constexpr double kEpsilon = 1e-6;
   const int num_of_segments = waypoints_segments.size();
   double s_offset = 0.0;
@@ -610,12 +646,13 @@ void NavigationMap::PublishReferenceLine() {
     maker.id = id_count++;
     maker.header.frame_id = "map";
     maker.header.stamp = ros::Time::now();
-    maker.scale.x = 0.5;
-    maker.scale.y = 0.1;
-    maker.scale.z = 0.1;
+    maker.scale.x = 1.0;
+    maker.scale.y = 0.0;
+    maker.scale.z = 0.0;
     maker.color =
         common::ColorMap::at(common::Color::kRoyalBlue, 0.3).toRosMsg();
     maker.pose.orientation.w = 1;
+    maker.lifetime = ros::Duration(0.15);
 
     for (int i = 0; i < num_of_points; ++i) {
       maker.points.emplace_back(
@@ -623,6 +660,7 @@ void NavigationMap::PublishReferenceLine() {
     }
     markers.markers.emplace_back(maker);
   }
+
   reference_line_pub_.publish(markers);
 }
 }  // namespace planning

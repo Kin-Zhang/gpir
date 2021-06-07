@@ -35,7 +35,7 @@ bool GPPathOptimizer::GenerateGPPath(const ReferenceLine& reference_line,
   auto pose_fix_cost2 =
       gtsam::noiseModel::Diagonal::Sigmas(Vector3(1, 0.1, 0.1));
   auto pose_fix_cost3 =
-      gtsam::noiseModel::Diagonal::Sigmas(Vector3(20, 1e9, 1e9));
+      gtsam::noiseModel::Diagonal::Sigmas(Vector3(30, 1e9, 1e9));
   const double delta_s = length / (num_of_nodes_ - 1);
 
   s_refs_.clear();
@@ -79,7 +79,7 @@ bool GPPathOptimizer::GenerateGPPath(const ReferenceLine& reference_line,
 
       graph_.add(GPPriorFactor(last_key, key, delta_s, kQc));
 
-      if (std::fabs(current_s - s) > 6) {
+      if (std::fabs(current_s - s) > 20) {
         graph_.add(PriorFactor3(key, x_ref, pose_fix_cost3));
       }
       graph_.add(

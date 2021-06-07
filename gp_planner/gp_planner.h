@@ -16,6 +16,8 @@ class GPPlanner : public Planner {
   void Init() override;
   void PlanOnce(NavigationMap* navigation_map_) override;
 
+  void RandomlyAddVirtualObstacle(const int num);
+
  private:
   bool ProcessObstacles(const std::vector<Obstacle>& raw_obstacles,
                         const ReferenceLine& reference_line,
@@ -23,8 +25,11 @@ class GPPlanner : public Planner {
 
   void UpdateVirtualObstacles();
 
-  void VisualizeCriticalObstacle();
+  void VisualizeCriticalObstacle(
+      const std::vector<Obstacle>& critical_obstacles);
   void VisualizeVirtualObstacle();
+
+  void VisualizeTargetLane(const ReferenceLine& reference_line);
 
   void VirtualObstacleSub(const std_msgs::Bool& msg) {
     add_virtual_obstacle_ = true;
@@ -34,6 +39,7 @@ class GPPlanner : public Planner {
   ros::Publisher trajectory_pub_;
   ros::Publisher critical_obstacle_pub_;
   ros::Publisher virtual_obstacle_pub_;
+  ros::Publisher target_lane_pub_;
   ros::Subscriber virtual_obstacle_sub_;
 
   common::State state_;

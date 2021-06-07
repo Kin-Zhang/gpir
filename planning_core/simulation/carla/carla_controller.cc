@@ -123,7 +123,7 @@ int main(int argc, char* argv[]) {
       speed_controller.Reset();
     }
 
-    control_cmd.steer = -target_steer / 1.22173035145;
+    control_cmd.steer = -target_steer / 1.22173035145 * 0.9;
     control_pub.publish(control_cmd);
 
     rate.sleep();

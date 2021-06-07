@@ -16,6 +16,8 @@ class RouteSequence : public std::deque<RouteSegment> {
   void Update(const Eigen::Vector2d& position);
   void RemoveOldestRoute();
   void AddRoute(const RouteSegment& route_segment);
+  void ChangeMainAction(const hdmap::LaneSegmentBehavior type);
+  bool IsWithInLane(const Eigen::Vector2d position);
 
   inline const RouteSegment& current_route() { return at(current_index_); }
   inline const RouteSegment& next_route() { return at(current_index_ + 1); }

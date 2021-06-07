@@ -19,9 +19,11 @@ void GPPlanner::Init() {
   trajectory_pub_ =
       node.advertise<visualization_msgs::MarkerArray>("/gp_path", 1);
   critical_obstacle_pub_ =
-      node.advertise<visualization_msgs::MarkerArray>("/critical_obstacle", 1);
+      node.advertise<visualization_msgs::MarkerArray>("/critical_obstacles", 1);
   virtual_obstacle_pub_ =
       node.advertise<visualization_msgs::MarkerArray>("/virtual_obstacle", 1);
+  target_lane_pub_ = node.advertise<visualization_msgs::MarkerArray>(
+      "/behavior_target_lane", 1);
   virtual_obstacle_sub_ =
       node.subscribe("/add_virtual", 1, &GPPlanner::VirtualObstacleSub, this);
 
@@ -201,8 +203,14 @@ void GPPlanner::PlanOnce(NavigationMap* navigation_map_) {
   visualization_msgs::MarkerArray markers;
   int id_count = 0;
 
-  std::vector<common::Trajectory> trajectory_candidate;
+  std::vector<Obstacle> critical_obstacles;
+  std::vector<std::pair<hdmap::LaneSegmentBehavior, common::Trajectory>>
+      trajectory_candidate;
+
   for (const auto& reference_line : reference_lines) {
+    ProcessObstacles(navigation_map_->obstacles(), reference_line,
+                     &critical_obstacles);
+
     const double length = reference_line.length();
 
     OccupancyMap occupancy_map;
@@ -230,14 +238,16 @@ void GPPlanner::PlanOnce(NavigationMap* navigation_map_) {
     common::FrenetState frenet_state;
     if (last_behavior_ != reference_line.behavior()) {
       reference_line.ToFrenetState(state, &frenet_state);
+      LOG(WARNING) << "recalculate planning start point";
     } else {
       if (!navigation_map_->trajectory().empty()) {
-        LOG(ERROR) << "WTF???";
         state = navigation_map_->trajectory().GetNearestState(state.position);
+        frenet_state.d = state.frenet_d;
         frenet_state.s = state.frenet_s;
-        frenet_state.d = state.debug;
+        LOG(INFO) << "use last trajectory";
       } else {
         reference_line.ToFrenetState(state, &frenet_state);
+        LOG(WARNING) << "not use last trajectory";
       }
     }
 
@@ -246,24 +256,27 @@ void GPPlanner::PlanOnce(NavigationMap* navigation_map_) {
     if (!gp_path_optimizer.GenerateGPPath(
             reference_line, frenet_state, 90, proj.s,
             navigation_map_->mutable_trajectory(), &gp_path)) {
-      LOG(ERROR) << "path failed";
+      LOG(ERROR) << "GP path planning failed";
       return;
     }
 
     StGraph st_graph(frenet_state.s);
     LOG(INFO) << frenet_state.DebugString();
     st_graph.SetReferenceSpeed(ref_v);
-    st_graph.BuildStGraph(dynamic_obstacles_, gp_path);
+    st_graph.BuildStGraph(critical_obstacles, gp_path);
     if (!st_graph.LocalTopSearch(13, nullptr)) {
+      LOG(ERROR) << "ST graph search failed";
       return;
     }
     if (!st_graph.OptimizeTest()) {
+      LOG(ERROR) << "Fail to optimize speed profile";
       st_graph.VisualizeStGraph();
       return;
     }
     trajectory_candidate.emplace_back();
     st_graph.GenerateTrajectory(reference_line, gp_path,
-                                &trajectory_candidate.back());
+                                &trajectory_candidate.back().second);
+    trajectory_candidate.back().first = reference_line.behavior();
 
     // * visual
     visualization_msgs::Marker line, node;
@@ -276,6 +289,7 @@ void GPPlanner::PlanOnce(NavigationMap* navigation_map_) {
     line.color = common::ColorMap::at(common::Color::kOrangeRed).toRosMsg();
     line.pose.orientation.w = 1;
     line.scale.x = line.scale.y = line.scale.z = 0.15;
+    line.lifetime = ros::Duration(0.15);
 
     node.header = line.header;
     node.id = id_count++;
@@ -284,9 +298,10 @@ void GPPlanner::PlanOnce(NavigationMap* navigation_map_) {
     node.color = common::ColorMap::at(common::Color::kBlack).toRosMsg();
     node.pose.orientation.w = 1;
     node.scale.x = node.scale.y = node.scale.z = 0.2;
+    node.lifetime = ros::Duration(0.15);
 
     geometry_msgs::Point point;
-    for (const auto& p : trajectory_candidate.back()) {
+    for (const auto& p : trajectory_candidate.back().second) {
       point.x = p.position.x();
       point.y = p.position.y();
       point.z = 0.1;
@@ -297,16 +312,22 @@ void GPPlanner::PlanOnce(NavigationMap* navigation_map_) {
     markers.markers.emplace_back(line);
     markers.markers.emplace_back(node);
   }
-  *navigation_map_->mutable_trajectory() = trajectory_candidate.back();
+  *navigation_map_->mutable_trajectory() = trajectory_candidate.front().second;
+  navigation_map_->SetPlannerLCFeedback(trajectory_candidate.front().first !=
+                                        hdmap::LaneSegmentBehavior::kKeep);
+  last_behavior_ = trajectory_candidate.front().first;
 
   trajectory_pub_.publish(markers);
+  VisualizeTargetLane(
+      reference_lines[reference_lines.size() - trajectory_candidate.size()]);
   VisualizeVirtualObstacle();
+  VisualizeCriticalObstacle(critical_obstacles);
 }
 
 bool GPPlanner::ProcessObstacles(const std::vector<Obstacle>& raw_obstacles,
                                  const ReferenceLine& reference_line,
                                  std::vector<Obstacle>* cirtical_obstacles) {
-  dynamic_obstacles_.clear();
+  cirtical_obstacles->clear();
   ego_box_ = common::Box2D(state_.position, vehicle_param_.length,
                            vehicle_param_.width, state_.heading,
                            vehicle_param_.height);
@@ -332,40 +353,80 @@ bool GPPlanner::ProcessObstacles(const std::vector<Obstacle>& raw_obstacles,
 
     if (outside_roi && intersect_safe) continue;
     LOG(WARNING) << "critical obstacle " << obstacle.id();
-    if (obstacle.is_static()) {
-      static_obstacles_.emplace_back(obstacle);
-    } else {
-      dynamic_obstacles_.emplace_back(obstacle);
+    if (!obstacle.is_static()) {
+      cirtical_obstacles->emplace_back(obstacle);
     }
   }
   return true;
 }
 
-void GPPlanner::VisualizeCriticalObstacle() {
+void GPPlanner::VisualizeCriticalObstacle(
+    const std::vector<Obstacle>& critical_obstacles) {
   visualization_msgs::MarkerArray markers;
   visualization_msgs::Marker marker;
-  marker.header.frame_id = "map";
-  marker.header.stamp = ros::Time::now();
-  marker.type = visualization_msgs::Marker::ARROW;
-  marker.pose.orientation.w = 1;
-  marker.scale.x = 0.3;
-  marker.scale.y = 0.5;
-  marker.scale.z = 0.3;
+  marker.lifetime = ros::Duration(0.15);
 
   geometry_msgs::Point p;
-  for (const auto& obs : dynamic_obstacles_) {
-    marker.points.clear();
-    const auto& state = obs.state();
-    p.x = state.position.x();
-    p.y = state.position.y();
-    p.z = 2.0;
-    marker.points.emplace_back(p);
-    p.z = 3.0;
-    marker.points.emplace_back(p);
+  int id_count = 0;
+  for (const auto& obs : critical_obstacles) {
+    PlanningVisual::GetPlannerBoxMarker(obs.state().position, obs.width() + 0.3,
+                                        obs.length() + 0.3, obs.state().heading,
+                                        common::Color::kRed, &marker);
+    marker.id = id_count++;
     markers.markers.emplace_back(marker);
   }
 
   critical_obstacle_pub_.publish(markers);
+}
+
+void GPPlanner::VisualizeTargetLane(const ReferenceLine& reference_line) {
+  visualization_msgs::MarkerArray markers;
+  visualization_msgs::Marker marker;
+  marker.header.frame_id = "map";
+  marker.header.stamp = ros::Time::now();
+  marker.type = visualization_msgs::Marker::LINE_LIST;
+  marker.action = visualization_msgs::Marker::MODIFY;
+  marker.pose.orientation.w = 1.0;
+
+  constexpr double step_length = 5.0;
+  constexpr double angle = M_PI_4;
+  double length = 0.75 / std::sin(angle);
+
+  auto rotate_vector = [&length](const Eigen::Vector3d& base,
+                                 const double angle) {
+    geometry_msgs::Point point;
+    auto rotated_vector =
+        base.topRows(2) + length * Eigen::Vector2d(std::cos(base(2) + angle),
+                                                   std::sin(base(2) + angle));
+    point.x = rotated_vector.x();
+    point.y = rotated_vector.y();
+    return point;
+  };
+
+  marker.id = 0;
+  for (double s = 0; s < reference_line.length(); s += step_length) {
+    auto bh = reference_line.behavior();
+    if (bh == hdmap::LaneSegmentBehavior::kKeep) {
+      PlanningVisual::SetScaleAndColor({0.4, 0, 0}, common::Color::kGreen,
+                                       &marker);
+    } else {
+      PlanningVisual::SetScaleAndColor({0.4, 0, 0}, common::Color::kMagenta,
+                                       &marker);
+    }
+    auto se2 = reference_line.GetSE2(s);
+    geometry_msgs::Point origin;
+    origin.x = se2.x();
+    origin.y = se2.y();
+    auto left = rotate_vector(se2, M_PI - angle);
+    marker.points.push_back(origin);
+    marker.points.push_back(left);
+    auto right = rotate_vector(se2, -M_PI + angle);
+    marker.points.push_back(origin);
+    marker.points.push_back(right);
+  }
+  markers.markers.push_back(marker);
+
+  target_lane_pub_.publish(markers);
 }
 
 void GPPlanner::VisualizeVirtualObstacle() {

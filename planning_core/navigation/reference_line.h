@@ -27,6 +27,8 @@ class ReferenceLine {
   double GetArcLength(const Eigen::Vector2d& position,
                       const double epsilon = 1e-3) const;
 
+  Eigen::Vector3d GetSE2(const double s) const;
+
   void GetCurvature(const double s, double* kappa, double* dkappa) const;
 
   common::FrenetReferencePoint GetFrenetReferncePoint(const double s) const;

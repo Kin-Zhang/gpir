@@ -43,6 +43,7 @@ bool CarlaMockPerception::UpdateMockPerceptionResult(
   obstacles->reserve(objects_->objects.size());
 
   Obstacle obstacle;
+  std::vector<Obstacle> ego;
   const double stamp = objects_->header.stamp.toSec();
   for (const auto& object : objects_->objects) {
     // if (object.id == ego_id) continue;
@@ -63,7 +64,7 @@ bool CarlaMockPerception::UpdateMockPerceptionResult(
       //                         object.shape.dimensions[2]);
       // obstacle.set_static(false);
       // obstacles->emplace_back(obstacle);
-      continue;
+      // continue;
     }
 
     obstacle.set_id(object.id);
@@ -79,15 +80,20 @@ bool CarlaMockPerception::UpdateMockPerceptionResult(
     obstacle.SetBoundingBox(object.shape.dimensions[0],
                             object.shape.dimensions[1],
                             object.shape.dimensions[2]);
-    obstacles->emplace_back(obstacle);
+    if (object.id == ego_id) {
+      ego.emplace_back(obstacle);
+    } else {
+      obstacles->emplace_back(obstacle);
+    }
   }
 
   jsk_msgs::BoundingBoxArray bbox_array;
   visualization_msgs::MarkerArray markers;
   PlanningVisual::ObstacleToJskBBoxArray(*obstacles, &bbox_array);
   PlanningVisual::ObstacleInfoToMarkerArray(*obstacles, &markers);
+  PlanningVisual::ObstacleInfoToMarkerArray(ego, &markers);
   obstacles_pub_.publish(bbox_array);
-  // obstacles_info_pub_.publish(markers);
+  obstacles_info_pub_.publish(markers);
 
   return true;
 }

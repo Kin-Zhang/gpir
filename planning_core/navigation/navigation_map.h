@@ -9,9 +9,11 @@
 
 #include "common/base/state.h"
 #include "common/base/trajectory.h"
+#include "common/utils/timer.h"
 #include "hdmap/routing/full_route.h"
 #include "planning_core/navigation/reference_line.h"
 #include "planning_core/navigation/route_sequence.h"
+#include "planning_core/planning_common/behavior.h"
 #include "planning_core/planning_common/data_frame.h"
 
 namespace planning {
@@ -37,6 +39,10 @@ class NavigationMap {
   bool CreateTask(const Eigen::Vector2d& goal_pos, const double goal_heading);
 
   bool UpdateReferenceLine();
+
+  void SetPlannerLCFeedback(bool is_planner_lc_ok);
+
+  void AdjustReferenceSpeed(const double delta) { adjust_speed_ += delta; }
 
   //  private:
   bool SelectRouteSequence(const common::State& state);
@@ -74,6 +80,7 @@ class NavigationMap {
   void AddLaneToRouteSequence(
       const int lane_id, RouteSequence* route_sequence,
       hdmap::LaneSegmentBehavior type = hdmap::LaneSegmentBehavior::kKeep);
+  void UpdateLaneChangeStatus();
 
   void PublishReferenceLine();
   void PublishRouteSequence();
@@ -83,11 +90,16 @@ class NavigationMap {
   ros::Publisher route_sequence_pub_;
 
   double refernce_speed_ = 0.0;
+  double adjust_speed_ = 0.0;
+
   ReferenceLine reference_line_;
   std::vector<ReferenceLine> reference_lines_;
   common::Trajectory trajectory_;
 
-  bool in_lane_changing_ = false;
+  bool is_lane_changing_ = false;
+  bool planner_lc_ok_ = false;
+  LCStatus lc_status_ = LCStatus::kIdle;
+  common::Timer lc_timmer_;
 
   std::shared_ptr<DataFrame> data_frame_ = nullptr;
   std::unique_ptr<hdmap::FullRoute> full_route_ = nullptr;

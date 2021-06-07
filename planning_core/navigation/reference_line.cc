@@ -103,6 +103,13 @@ double ReferenceLine::GetArcLength(const Eigen::Vector2d& position,
   return (lb + ub) / 2;
 }
 
+Eigen::Vector3d ReferenceLine::GetSE2(const double s) const {
+  Eigen::Vector3d se2;
+  se2.topRows(2) = spline_.pos(s) + origin_;
+  se2(2) = spline_.theta(s);
+  return se2;
+}
+
 common::FrenetReferencePoint ReferenceLine::GetFrenetReferncePoint(
     const double s) const {
   common::FrenetReferencePoint ref;
