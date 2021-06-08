@@ -42,6 +42,12 @@ int RandomInt(const int size) {
   return distr(gen);
 }
 
+double RandomDouble(const double lb, const double ub) {
+  std::uniform_real_distribution<double> distr(lb, ub);
+  std::default_random_engine re;
+  return distr(re);
+}
+
 double Curvature(const double dx, const double d2x, const double dy,
                  const double d2y) {
   // kappa = (dx * d2y - dy * d2x) / [(dx * dx + dy * dy)^(3/2)]

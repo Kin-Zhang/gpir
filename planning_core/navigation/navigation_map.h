@@ -44,20 +44,7 @@ class NavigationMap {
 
   void AdjustReferenceSpeed(const double delta) { adjust_speed_ += delta; }
 
-  //  private:
-  bool SelectRouteSequence(const common::State& state);
-
-  void GetReferenceWaypoints(const common::State& state,
-                             const RouteSequence& route_sequence,
-                             const double forward, const double backward,
-                             std::vector<hdmap::WayPoint>* waypoints,
-                             std::vector<int>* lane_id_list);
-
-  void GenerateWaypoints(const common::State& state, const double forward,
-                         const double backward, int target_lane,
-                         int forward_lane_hint, int backward_lane_hint,
-                         std::vector<hdmap::WayPoint>* waypoints,
-                         std::vector<int>* lane_id_list);
+  void AddVirtualObstacles();
 
   Eigen::Vector2d GetPoint(const double s);
 
@@ -74,7 +61,21 @@ class NavigationMap {
   const common::Trajectory& trajectory() const { return trajectory_; }
   common::Trajectory* mutable_trajectory() { return &trajectory_; }
 
- private:
+ protected:
+  bool SelectRouteSequence(const common::State& state);
+
+  void GetReferenceWaypoints(const common::State& state,
+                             const RouteSequence& route_sequence,
+                             const double forward, const double backward,
+                             std::vector<hdmap::WayPoint>* waypoints,
+                             std::vector<int>* lane_id_list);
+
+  void GenerateWaypoints(const common::State& state, const double forward,
+                         const double backward, int target_lane,
+                         int forward_lane_hint, int backward_lane_hint,
+                         std::vector<hdmap::WayPoint>* waypoints,
+                         std::vector<int>* lane_id_list);
+
   std::vector<RouteSequence*> GetRouteCandidate();
   bool UpdateRouteSequence(RouteSequence* route_sequence);
   void AddLaneToRouteSequence(
@@ -96,7 +97,6 @@ class NavigationMap {
   std::vector<ReferenceLine> reference_lines_;
   common::Trajectory trajectory_;
 
-  bool is_lane_changing_ = false;
   bool planner_lc_ok_ = false;
   LCStatus lc_status_ = LCStatus::kIdle;
   common::Timer lc_timmer_;
@@ -105,5 +105,8 @@ class NavigationMap {
   std::unique_ptr<hdmap::FullRoute> full_route_ = nullptr;
   std::unique_ptr<RouteSequence> route_sequence_ = nullptr;
   std::unique_ptr<RouteSequence> route_sequence_lane_change_ = nullptr;
+
+  // maintain position of virtual obstacles
+  std::vector<Eigen::Vector2d> virtual_obstacles_;
 };
 }  // namespace planning

@@ -43,6 +43,10 @@ class KeyboardHandler():
                     print("{}: Suggest right lane change.".format(self.cmd_count))
                     joy.buttons[1] = 1
                     self.publish_joy(joy)
+                elif event.key == pg.K_e:
+                    print("{}: Add virtual obstacles to lane".format(self.cmd_count))
+                    joy.buttons[5] = 1
+                    self.publish_joy(joy);
 
 
 def main():

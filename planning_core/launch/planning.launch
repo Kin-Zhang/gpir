@@ -1,7 +1,7 @@
 <launch>
 
 <arg name="map_path" default="$(find hdmap)/maps/"/>
-<arg name="town" default="Town04"/>
+<arg name="town" default="Town05"/>
 <arg name="simulator" default="Carla"/>
 
 <node pkg="planning_core" name="planning" type="planning" output="screen">

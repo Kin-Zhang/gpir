@@ -16,14 +16,16 @@ class GPPlanner : public Planner {
   void Init() override;
   void PlanOnce(NavigationMap* navigation_map_) override;
 
-  void RandomlyAddVirtualObstacle(const int num);
-
  private:
   bool ProcessObstacles(const std::vector<Obstacle>& raw_obstacles,
                         const ReferenceLine& reference_line,
                         std::vector<Obstacle>* cirtical_obstacles);
 
   void UpdateVirtualObstacles();
+
+  void VisualizeTrajectory(
+      const std::vector<std::pair<hdmap::LaneSegmentBehavior,
+                                  common::Trajectory>>& trajectory_candidates);
 
   void VisualizeCriticalObstacle(
       const std::vector<Obstacle>& critical_obstacles);

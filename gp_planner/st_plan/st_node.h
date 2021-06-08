@@ -18,14 +18,15 @@ class StNode {
   StNode(const double s, const double v, const double a = 0.0)
       : s(s), v(v), a(a) {}
 
-  static void SetReferenceSpeed(const double ref_v) { ref_v_ = ref_v; }
-  static void SetWeights(const StNodeWeights& weights) { weights_ = weights; }
-
   std::unique_ptr<StNode> Forward(const double delta_t, const double a) const;
   void CalObstacleCost(const double d);
   inline double GetDistance(const double delta_t, const double a) const {
     return s + v * delta_t + 0.5 * a * delta_t * delta_t;
   }
+
+  static void SetReferenceSpeed(const double ref_v) { ref_v_ = ref_v; }
+  static void SetWeights(const StNodeWeights& weights) { weights_ = weights; }
+  static double reference_speed() { return ref_v_; }
 
   double t = 0.0;
   double s = 0.0;

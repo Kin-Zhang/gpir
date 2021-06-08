@@ -39,7 +39,7 @@ void StGraph::BuildStGraph(const std::vector<Obstacle>& dynamic_obstacles,
   OccupancyMap grid_map;
   grid_map.set_origin({0.0, init_s_[0]});
   grid_map.set_resolution({0.1, 0.1});
-  grid_map.set_cell_number({82, 1000});
+  grid_map.set_cell_number({82, 1500});
 
   vector_Eigen<Eigen::Vector2d> corners;
   corners.resize(4);
@@ -170,7 +170,8 @@ void StGraph::SetReferenceSpeed(const double ref_v) const {
   StNode::SetReferenceSpeed(ref_v);
 }
 
-bool StGraph::LocalTopSearch(const int k, std::vector<StNode>* result) {
+bool StGraph::SearchWithLocalTruncation(const int k,
+                                        std::vector<StNode>* result) {
   CHECK(k % 2 == 1) << "k needs to be an odd number, while k is " << k;
 
   int num_a_per_side = static_cast<int>(k / 2.0);
@@ -185,17 +186,18 @@ bool StGraph::LocalTopSearch(const int k, std::vector<StNode>* result) {
   StNodeWeights weight;
   // weight.control = 0.5;
   weight.obstacle = 10;
-  weight.ref_v = 1;
+  weight.ref_v = 3;
   StNode::SetWeights(weight);
   // StNode::SetReferenceSpeed(15.0);
 
-  // LOG(INFO) << "prepare a ok";
   std::unique_ptr<StNode> inital_node =
       std::make_unique<StNode>(init_s_[0], init_s_[1], init_s_[2]);
   search_tree_.resize(9);
   search_tree_[0].emplace_back(std::move(inital_node));
 
-  // LOG(INFO) << "prepare tree ok";
+  LOG(INFO) << "[search tree] init velocity: " << init_s_[1];
+  LOG(INFO) << "[search tree] reference velocity: "
+            << StNode::reference_speed();
 
   TIC;
   double t_expand = 0.0;
@@ -208,19 +210,17 @@ bool StGraph::LocalTopSearch(const int k, std::vector<StNode>* result) {
 
     auto t0 = std::chrono::high_resolution_clock::now();
     // LOG(INFO) << "iter: " << i
-    //           << ", expand num: " << search_tree_[i].size() *
-    //           discrete_a.size();
+    //           << ", expand num: " << search_tree_[i].size() * discrete_a.size();
     for (int j = 0; j < search_tree_[i].size(); ++j) {
       for (const auto& a : discrete_a) {
         auto next_node = search_tree_[i][j]->Forward(1.0, a);
         if (next_node->v < 0) continue;  // TODO: can optimize
         for (int k = 1; k <= 5; ++k) {
-          double tt, ss, dd;
           next_node->CalObstacleCost(sdf_->SignedDistance(
               Eigen::Vector2d(search_tree_[i][j]->t + k / 5.0,
                               search_tree_[i][j]->GetDistance(k / 5.0, a))));
         }
-        if (next_node->cost < 1e5) {
+        if (next_node->cost < 1e9) {
           cache.emplace_back(std::move(next_node));
         }
       }
@@ -243,10 +243,11 @@ bool StGraph::LocalTopSearch(const int k, std::vector<StNode>* result) {
 
     int min_index = 0;
     int min_cost = cache[0]->cost;
+    double start_s = cache[0]->s;
     bool is_new_group = false;
 
-    for (size_t j = 0; j < cache.size(); ++j) {
-      if (cache[j]->s - cache[min_index]->s <= kEpsilon) {
+    for (int j = 0; j < cache.size(); ++j) {
+      if (cache[j]->s - start_s <= kEpsilon) {
         if (cache[j]->cost < min_cost) {
           min_cost = cache[j]->cost;
           min_index = j;
@@ -256,11 +257,13 @@ bool StGraph::LocalTopSearch(const int k, std::vector<StNode>* result) {
       }
 
       if (is_new_group || j == cache.size() - 1) {
+        start_s = cache[j]->s;
         search_tree_[i + 1].emplace_back(std::move(cache[min_index]));
         min_index = j + 1;
         is_new_group = false;
       }
     }
+
     auto t3 = std::chrono::high_resolution_clock::now();
     t_compare +=
         std::chrono::duration_cast<std::chrono::nanoseconds>(t3 - t2).count();
@@ -387,6 +390,7 @@ void StGraph::VisualizeStGraph() {
   std::vector<double> t, s;
   for (int i = 1; i < search_tree_.size(); ++i) {
     if (search_tree_[i].empty()) break;
+    int count = 0;
     for (const auto& node : search_tree_[i]) {
       if (node->parent == nullptr) continue;
       t.clear();

@@ -12,7 +12,7 @@ bool StSpeedOptimizer::Optimize(const Eigen::Vector3d& init_s,
   st_graph_.SetInitialState(init_s);
   st_graph_.BuildStGraph(dynamic_obstacle, gp_path);
   std::vector<StNode> st_nodes;
-  if (!st_graph_.LocalTopSearch(9, &st_nodes)) {
+  if (!st_graph_.SearchWithLocalTruncation(9, &st_nodes)) {
     LOG(ERROR) << "fail to generate feasible initial s-t profile";
     return false;
   }

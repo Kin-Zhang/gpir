@@ -13,13 +13,19 @@ using common::Color;
 using common::ColorMap;
 using common::CommonVisual;
 
+void PlanningVisual::FillHeader(std_msgs::Header* header) {
+  header->frame_id = "map";
+  header->stamp = ros::Time::now();
+}
+
 void PlanningVisual::SetScaleAndColor(const std::array<double, 3>& scale,
                                       common::Color color,
-                                      visualization_msgs::Marker* marker) {
+                                      visualization_msgs::Marker* marker,
+                                      const double alpha) {
   marker->scale.x = scale[0];
   marker->scale.y = scale[1];
   marker->scale.z = scale[2];
-  marker->color = common::ColorMap::at(color).toRosMsg();
+  marker->color = common::ColorMap::at(color, alpha).toRosMsg();
 }
 
 void PlanningVisual::BBoxToSolidCubeMarker(const common::Box2D& bbox,
@@ -112,19 +118,16 @@ void PlanningVisual::GetTrafficConeMarker(const Eigen::Vector2d& pos,
   tf::quaternionTFToMsg(q, marker->pose.orientation);
 }
 
-void PlanningVisual::GetPlannerBoxMarker(const Eigen::Vector2d& pos,
-                                         const double width,
-                                         const double length,
-                                         const double heading,
-                                         common::Color color,
-                                         visualization_msgs::Marker* marker) {
-  marker->header.frame_id = "map";
-  marker->header.stamp = ros::Time::now();
+void PlanningVisual::Get2DBoxMarker(const Eigen::Vector2d& pos,
+                                    const double width, const double length,
+                                    const double heading, common::Color color,
+                                    const std::array<double, 3>& scale,
+                                    visualization_msgs::Marker* marker) {
+  FillHeader(&marker->header);
+  SetScaleAndColor(scale, color, marker);
   marker->type = visualization_msgs::Marker::LINE_LIST;
   marker->action = visualization_msgs::Marker::MODIFY;
-  marker->color = ColorMap::at(color).toRosMsg();
   marker->pose.orientation.w = 1.0;
-  marker->scale.x = marker->scale.y = marker->scale.z = 0.15;
 
   const double half_length = length / 2.0 - 0.1;
   const double half_width = width / 2.0 + 0.1;

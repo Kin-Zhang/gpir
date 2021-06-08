@@ -34,7 +34,7 @@ class StGraph {
 
   bool TopKSearch(const int k);
 
-  bool LocalTopSearch(const int k, std::vector<StNode>* result);
+  bool SearchWithLocalTruncation(const int k, std::vector<StNode>* result);
 
   bool OptimizeTest();
 

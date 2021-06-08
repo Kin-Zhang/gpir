@@ -43,7 +43,7 @@ class MpcController {
   double ts_ = 0.05;
   double ls_ = 0.0;
   int horizon_ = 20;
-  int predict_steps_ = 3;
+  int predict_steps_ = 2;
 
   double max_speed_ = 20.0;
   double min_speed_ = 0.0;

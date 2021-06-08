@@ -26,7 +26,7 @@ std::unique_ptr<StNode> StNode::Forward(const double delta_t,
 
 void StNode::CalObstacleCost(const double d) {
   if (d <= 0) {
-    cost += 1e5;
+    cost += 1e9;
   } else if (d <= v * v / 6 || d <= 10.0) {
     cost += weights_.obstacle * std::max(v * v / 6 - d, 10.0 - d);
   }

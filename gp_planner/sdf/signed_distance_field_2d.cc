@@ -95,8 +95,7 @@ void SignedDistanceField2D::VerticalEuclideanDistanceTransform(
     std::array<int, 2> dim,
     std::function<bool(const int x, const int y)> is_occupied,
     DistanceMap* output_map) {
-  int inf = dim[0] + dim[1] + 10;
-  // int inf = 1e8;
+  int inf = 1e9;
 
   std::vector<std::vector<int>> g(dim[0], std::vector<int>(dim[1], 0));
   omp_set_num_threads(4);

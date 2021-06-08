@@ -104,7 +104,7 @@ int main(int argc, char const* argv[]) {
   leading_vehicle2.SetBoundingBox(4.7, 2.1, 1.4);
   leading_vehicle2.set_static(false);
   // dynamic_obstacle.emplace_back(leading_vehicle);
-  dynamic_obstacle.emplace_back(leading_vehicle2);
+  // dynamic_obstacle.emplace_back(leading_vehicle2);
 
   LOG(INFO) << "obstacle ok";
 
@@ -112,10 +112,10 @@ int main(int argc, char const* argv[]) {
   st_graph.SetInitialState(Eigen::Vector3d(initial_state.position.x(),
                                            initial_state.velocity,
                                            initial_state.acceleration));
-  st_graph.SetReferenceSpeed(10);
+  st_graph.SetReferenceSpeed(15);
   st_graph.BuildStGraph(dynamic_obstacle, gp_path);
   std::vector<StNode> st_nodes;
-  st_graph.LocalTopSearch(13, &st_nodes);
+  st_graph.SearchWithLocalTruncation(13, &st_nodes);
   st_graph.OptimizeTest();
   common::Trajectory traj;
   st_graph.GenerateTrajectory(reference_line, gp_path, &traj);
