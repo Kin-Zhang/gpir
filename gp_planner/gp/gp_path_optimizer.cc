@@ -241,14 +241,16 @@ bool GPPathOptimizer::DecideInitialPathBoundary(
       auto direction_vector = expansion->pos - candidate->pos;
       expansion->angle = std::atan2(direction_vector.y(), direction_vector.x());
       expansion->cost +=
-          weight_angle * NormalizeAngle(expansion->angle - candidate->angle);
+          weight_angle *
+          std::fabs(NormalizeAngle(expansion->angle - candidate->angle));
       // expansion->cost +=
       //     weight_dis * (expansion->pos - candidate->pos).squaredNorm();
       if (width < ego_width_ * 2) {
         expansion->cost += weight_width * (ego_width_ * 2 - width);
       }
-      // printf("(%d, %d), width: %f, cost: %f\n", current_idx + 1, j, width,
-      //        expansion->cost);
+      // printf("(%d, %d), width: %f, cost: %f, angle diff: %f\n", current_idx + 1,
+      //        j, width, expansion->cost,
+      //        NormalizeAngle(expansion->angle - candidate->angle));
       bfs_queue.push(std::move(expansion));
     }
   }
