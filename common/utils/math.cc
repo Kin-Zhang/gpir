@@ -44,7 +44,7 @@ int RandomInt(const int size) {
 
 double RandomDouble(const double lb, const double ub) {
   std::uniform_real_distribution<double> distr(lb, ub);
-  std::default_random_engine re;
+  std::default_random_engine re(std::random_device{}());
   return distr(re);
 }
 

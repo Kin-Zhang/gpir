@@ -20,53 +20,46 @@ void GPPlanner::Init() {
       node.advertise<visualization_msgs::MarkerArray>("/gp_path", 1);
   critical_obstacle_pub_ =
       node.advertise<visualization_msgs::MarkerArray>("/critical_obstacles", 1);
-  virtual_obstacle_pub_ =
-      node.advertise<visualization_msgs::MarkerArray>("/virtual_obstacle", 1);
   target_lane_pub_ = node.advertise<visualization_msgs::MarkerArray>(
       "/behavior_target_lane", 1);
-  virtual_obstacle_sub_ =
-      node.subscribe("/add_virtual", 1, &GPPlanner::VirtualObstacleSub, this);
 
   vehicle_param_ = VehicleInfo::Instance().vehicle_param();
 }
 
 void GPPlanner::PlanOnce(NavigationMap* navigation_map_) {
-  // * build sdf
   const auto& reference_lines = navigation_map_->reference_lines();
-
-  visualization_msgs::MarkerArray markers;
-  int id_count = 0;
+  const auto& virtual_obstacles = navigation_map_->virtual_obstacles();
+  const auto& obstacles = navigation_map_->obstacles();
 
   std::vector<Obstacle> critical_obstacles;
   std::vector<std::pair<hdmap::LaneSegmentBehavior, common::Trajectory>>
       trajectory_candidate;
 
   for (const auto& reference_line : reference_lines) {
-    ProcessObstacles(navigation_map_->obstacles(), reference_line,
-                     &critical_obstacles);
-
     const double length = reference_line.length();
+
+    ProcessObstacles(obstacles, reference_line, &critical_obstacles);
 
     OccupancyMap occupancy_map;
     occupancy_map.set_origin({0, -5});
     occupancy_map.set_cell_number(
         std::array<int, 2>{(int)std::ceil(length / 0.1), 100});
     occupancy_map.set_resolution({0.1, 0.1});
-    common::FrenetPoint proj;
-    if (!virtual_obstacles_.empty()) {
-      proj = reference_line.GetProjection(virtual_obstacles_.front());
+
+    std::vector<double> obstacle_location_hint;
+    // proj virtual obstacles
+    for (const auto& point : virtual_obstacles) {
+      auto proj = reference_line.GetProjection(point);
       occupancy_map.FillCircle(Eigen::Vector2d(proj.s, proj.d), 0.2);
-    } else {
-      proj.s = -1;
+      obstacle_location_hint.emplace_back(proj.s);
     }
+    // proj static obstacles
 
     auto sdf =
         std::make_shared<SignedDistanceField2D>(std::move(occupancy_map));
     sdf->UpdateSDF();
 
-    GPPathOptimizer gp_path_optimizer;
-    gp_path_optimizer.set_sdf(sdf);
-
+    // decide planning start point
     common::FrenetState frenet_state;
     auto ego_state = navigation_map_->ego_state();
     reference_line.ToFrenetState(ego_state, &frenet_state);
@@ -79,14 +72,17 @@ void GPPlanner::PlanOnce(NavigationMap* navigation_map_) {
       }
     }
 
+    // GP path planning
     GPPath gp_path;
-    if (!gp_path_optimizer.GenerateGPPath(
-            reference_line, frenet_state, 90, proj.s,
-            navigation_map_->mutable_trajectory(), &gp_path)) {
+    GPPathOptimizer gp_path_optimizer(sdf);
+    if (!gp_path_optimizer.GenerateGPPath(reference_line, frenet_state, 90, -1,
+                                          navigation_map_->mutable_trajectory(),
+                                          &gp_path)) {
       LOG(ERROR) << "GP path planning failed";
       return;
     }
 
+    // speed profile generation
     reference_line.ToFrenetState(ego_state, &frenet_state);
     StGraph st_graph(frenet_state.s);
     LOG(INFO) << frenet_state.DebugString();
@@ -115,7 +111,6 @@ void GPPlanner::PlanOnce(NavigationMap* navigation_map_) {
   VisualizeTrajectory(trajectory_candidate);
   VisualizeTargetLane(
       reference_lines[reference_lines.size() - trajectory_candidate.size()]);
-  VisualizeVirtualObstacle();
   VisualizeCriticalObstacle(critical_obstacles);
 }
 
@@ -294,16 +289,6 @@ void GPPlanner::VisualizeTargetLane(const ReferenceLine& reference_line) {
   markers.markers.push_back(marker);
 
   target_lane_pub_.publish(markers);
-}
-
-void GPPlanner::VisualizeVirtualObstacle() {
-  visualization_msgs::MarkerArray markers;
-  for (size_t i = 0; i < virtual_obstacles_.size(); ++i) {
-    visualization_msgs::Marker marker;
-    PlanningVisual::GetTrafficConeMarker(virtual_obstacles_[i], i, &marker);
-    markers.markers.emplace_back(marker);
-  }
-  virtual_obstacle_pub_.publish(markers);
 }
 
 }  // namespace planning

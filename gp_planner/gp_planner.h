@@ -21,39 +21,28 @@ class GPPlanner : public Planner {
                         const ReferenceLine& reference_line,
                         std::vector<Obstacle>* cirtical_obstacles);
 
-  void UpdateVirtualObstacles();
-
   void VisualizeTrajectory(
       const std::vector<std::pair<hdmap::LaneSegmentBehavior,
                                   common::Trajectory>>& trajectory_candidates);
 
   void VisualizeCriticalObstacle(
       const std::vector<Obstacle>& critical_obstacles);
-  void VisualizeVirtualObstacle();
 
   void VisualizeTargetLane(const ReferenceLine& reference_line);
-
-  void VirtualObstacleSub(const std_msgs::Bool& msg) {
-    add_virtual_obstacle_ = true;
-  }
 
  private:
   ros::Publisher trajectory_pub_;
   ros::Publisher critical_obstacle_pub_;
-  ros::Publisher virtual_obstacle_pub_;
   ros::Publisher target_lane_pub_;
-  ros::Subscriber virtual_obstacle_sub_;
 
   common::State state_;
   common::Box2D ego_box_;
   VehicleParam vehicle_param_;
 
-  bool add_virtual_obstacle_ = false;
   const double lateral_critical_thereshold_ = 6;
 
   std::vector<Obstacle> static_obstacles_;
   std::vector<Obstacle> dynamic_obstacles_;
-  vector_Eigen2d virtual_obstacles_;
 
   hdmap::LaneSegmentBehavior last_behavior_ = hdmap::LaneSegmentBehavior::kKeep;
 };

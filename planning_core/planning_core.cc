@@ -120,9 +120,14 @@ void PlanningCore::JoyCallBack(const sensor_msgs::Joy& joy) {
     LOG(INFO) << "Suggest right lane change by joy";
     suggest_lane_change_ = 2;
   } else if (joy.buttons[3] == 1) {
+    LOG(INFO) << "Increate reference speed";
     navigation_map_.AdjustReferenceSpeed(1);
   } else if (joy.buttons[0] == 1) {
+    LOG(INFO) << "Increate reference speed";
     navigation_map_.AdjustReferenceSpeed(-1);
+  } else if (joy.buttons[5] == 1) {
+    LOG(INFO) << "Add virtual Obstacles";
+    navigation_map_.RandomlyAddVirtualObstacles();
   }
 }
 

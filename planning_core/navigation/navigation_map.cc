@@ -14,10 +14,12 @@
 #include "common/utils/timer.h"
 #include "hdmap/hdmap.h"
 #include "hdmap/road_network/lane_map.h"
+#include "planning_core/planning_common/planning_visual.h"
 #include "planning_core/planning_common/plot_utils.h"
 
 namespace planning {
 
+using common::RandomDouble;
 using common::RandomInt;
 using common::Timer;
 using hdmap::LaneSegmentBehavior;
@@ -28,6 +30,8 @@ void NavigationMap::Init() {
       node.advertise<visualization_msgs::MarkerArray>("/reference_line1", 1);
   route_sequence_pub_ =
       node.advertise<visualization_msgs::MarkerArray>("/route_sequence", 1);
+  virtual_obstacle_pub_ =
+      node.advertise<visualization_msgs::MarkerArray>("/virtual_obstacle", 1);
 }
 
 void NavigationMap::Update(std::shared_ptr<DataFrame> data_frame) {
@@ -216,6 +220,8 @@ bool NavigationMap::UpdateReferenceLine() {
     ref_line->set_behavior(route->main_action());
   }
 
+  UpdateVirtualObstacles();
+
   // * update reference speed
   const double lat_acc_limit = 2.0;
   double kappa, dkappa = 0.0;
@@ -237,6 +243,36 @@ bool NavigationMap::UpdateReferenceLine() {
   PublishRouteSequence();
   PublishReferenceLine();
   return true;
+}
+
+void NavigationMap::UpdateVirtualObstacles() {
+  std::set<int> valid_obstacle_index;
+  for (const auto& reference_line : reference_lines_) {
+    auto ego_proj = reference_line.GetProjection(data_frame_->state.position);
+    for (int i = 0; i < virtual_obstacles_.size(); ++i) {
+      auto obs_proj = reference_line.GetProjection(virtual_obstacles_[i]);
+      if (ego_proj.s - obs_proj.s <= 5) {
+        valid_obstacle_index.insert(i);
+      }
+    }
+  }
+  std::vector<Eigen::Vector2d> remaining_obstacles;
+  for (const auto& idx : valid_obstacle_index) {
+    remaining_obstacles.emplace_back(virtual_obstacles_[idx]);
+  }
+  virtual_obstacles_ = remaining_obstacles;
+
+  if (add_virtual_obstacles_) {
+    const auto& target_lane = reference_lines_.front();
+    auto ego_proj = target_lane.GetProjection(data_frame_->state.position);
+    double obs_s = RandomDouble(ego_proj.s + 50, ego_proj.s + 70);
+    double obs_d = RandomDouble(1.0, 1.5);
+    Eigen::Vector2d obs_pos;
+    target_lane.FrenetToCartesion(obs_s, obs_d, &obs_pos);
+    virtual_obstacles_.emplace_back(obs_pos);
+    add_virtual_obstacles_ = false;
+  }
+  PublishVirtualObstacles();
 }
 
 bool NavigationMap::SelectRouteSequence(const common::State& state) {
@@ -662,5 +698,16 @@ void NavigationMap::PublishReferenceLine() {
   }
 
   reference_line_pub_.publish(markers);
+}
+
+void NavigationMap::PublishVirtualObstacles() {
+  visualization_msgs::MarkerArray markers;
+  visualization_msgs::Marker marker;
+  marker.lifetime = ros::Duration(0.15);
+  for (size_t i = 0; i < virtual_obstacles_.size(); ++i) {
+    PlanningVisual::GetTrafficConeMarker(virtual_obstacles_[i], i, &marker);
+    markers.markers.emplace_back(marker);
+  }
+  virtual_obstacle_pub_.publish(markers);
 }
 }  // namespace planning
