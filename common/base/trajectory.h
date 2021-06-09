@@ -3,6 +3,7 @@
 #pragma once
 
 #include <Eigen/Dense>
+#include <iomanip>
 #include <vector>
 
 #include "common/base/state.h"
@@ -32,5 +33,19 @@ class Trajectory : public std::vector<common::State> {
     return data()[GetNearsetIndex(pos)];
   }
 };
+
+inline std::ostream& operator<<(std::ostream& os,
+                                const Trajectory& trajectory) {
+  os << "Trajectory: \n";
+  for (const auto& point : trajectory) {
+    os << std::fixed << std::setprecision(4) << "[" << std::left
+       << "x: " << std::setw(6) << point.position.x() << ", "
+       << "y: " << std::setw(6) << point.position.y() << ", "
+       << "s: " << std::setw(6) << point.s << ", "
+       << "v: " << std::setw(6) << point.velocity << ", "
+       << "a: " << std::setw(6) << point.acceleration << "]\n";
+  }
+  return os;
+}
 
 }  // namespace common

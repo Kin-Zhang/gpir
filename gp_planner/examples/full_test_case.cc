@@ -46,6 +46,12 @@ int main(int argc, char const* argv[]) {
   occupancy_map.set_origin({0, -5});
   occupancy_map.set_cell_number(std::array<int, 2>{900, 100});
   occupancy_map.set_resolution({0.1, 0.1});
+  occupancy_map.FillConvexPoly(
+      vector_Eigen2d{Eigen::Vector2d(-5, -1), Eigen::Vector2d(-3, -1),
+                     Eigen::Vector2d(-3, 0), Eigen::Vector2d(-5, 0)});
+  occupancy_map.FillConvexPoly(
+      vector_Eigen2d{Eigen::Vector2d(5, 1), Eigen::Vector2d(5, 1),
+                     Eigen::Vector2d(5, 1), Eigen::Vector2d(5, 1)});
   auto sdf = std::make_shared<SignedDistanceField2D>(std::move(occupancy_map));
   sdf->UpdateSDF();
 
@@ -59,9 +65,12 @@ int main(int argc, char const* argv[]) {
   initial_state.acceleration = 0.0;
   initial_state.stamp = 0.0;
 
+  common::FrenetState frenet_state;
+  reference_line.ToFrenetState(initial_state, &frenet_state);
+
   GPPath gp_path;
   common::Trajectory trajectory;
-  if (!gp_path_optimizer.GenerateGPPath(reference_line, initial_state, 90, -1,
+  if (!gp_path_optimizer.GenerateGPPath(reference_line, frenet_state, 90, -1,
                                         &trajectory, &gp_path)) {
     LOG(ERROR) << "gp planner failed";
     return -1;
@@ -76,9 +85,9 @@ int main(int argc, char const* argv[]) {
   auto future_points2 = leading_vehicle2.mutable_prediction();
   constexpr double inital_distance = 30;
   constexpr double leading_v = 8.0;
-  constexpr double leading_v2 = 5.0;
+  constexpr double leading_v2 = 8.0;
   constexpr double initial_y = 0.0;
-  constexpr double initial_y2 = .0;
+  constexpr double initial_y2 = 0.0;
   common::State future_state;
   for (double t = 0.0; t < 8.0; t += 0.2) {
     future_state.position =
@@ -87,15 +96,15 @@ int main(int argc, char const* argv[]) {
     future_state.stamp = t;
     future_points->emplace_back(future_state);
     future_state.position =
-        Eigen::Vector2d(50 + leading_v2 * t, initial_y2 * (8.0 - t) / 8.0);
+        Eigen::Vector2d(40 + leading_v2 * t, initial_y2 * (8.0 - t) / 8.0);
     future_points2->emplace_back(future_state);
   }
   leading_vehicle.SetBoundingBox(4.7, 2.1, 1.4);
   leading_vehicle.set_static(false);
   leading_vehicle2.SetBoundingBox(4.7, 2.1, 1.4);
   leading_vehicle2.set_static(false);
-  dynamic_obstacle.emplace_back(leading_vehicle);
-  dynamic_obstacle.emplace_back(leading_vehicle2);
+  // dynamic_obstacle.emplace_back(leading_vehicle);
+  // dynamic_obstacle.emplace_back(leading_vehicle2);
 
   LOG(INFO) << "obstacle ok";
 
@@ -103,9 +112,16 @@ int main(int argc, char const* argv[]) {
   st_graph.SetInitialState(Eigen::Vector3d(initial_state.position.x(),
                                            initial_state.velocity,
                                            initial_state.acceleration));
+  st_graph.SetReferenceSpeed(15);
   st_graph.BuildStGraph(dynamic_obstacle, gp_path);
-  st_graph.LocalTopSearch(13);
+  std::vector<StNode> st_nodes;
+  st_graph.SearchWithLocalTruncation(13, &st_nodes);
+  st_graph.OptimizeTest();
+  common::Trajectory traj;
+  st_graph.GenerateTrajectory(reference_line, gp_path, &traj);
   st_graph.VisualizeStGraph();
+
+  // st_graph.SaveSnapShot("/home/udi/research/ral2021_gpir/data");
 
   return 0;
 }

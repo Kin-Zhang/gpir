@@ -13,9 +13,7 @@ namespace common {
 
 OsqpSpline2dSolver::OsqpSpline2dSolver(const std::vector<double>& t_knots,
                                        const uint32_t order)
-    : Spline2dSolver(t_knots, order) {
-      LOG(INFO) << "YOU BING?";
-    }
+    : Spline2dSolver(t_knots, order) {}
 
 void OsqpSpline2dSolver::Reset(const std::vector<double>& t_knots,
                                const uint32_t order) {

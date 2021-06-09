@@ -7,23 +7,53 @@
 namespace planning {
 
 void RouteSequence::Update(const Eigen::Vector2d& position) {
+  if (empty()) return;
   constexpr double kEpsilon = 0.1;
-  auto current_lane = hdmap::LaneMap::GetLane(data()[current_index_].id());
-  if (main_action() == hdmap::LaneSegmentBehavior::kKeep) {
-    if (current_lane->GetArcLength(position) >
-        current_lane->length() - kEpsilon) {
-      if (current_index_ == size() - 1) {
-        arrived_ = true;
-      } else {
-        ++current_index_;
+  auto current_lane = hdmap::LaneMap::GetLane(at(current_index_).id());
+  if (current_lane->GetArcLength(position) >
+      current_lane->length() - kEpsilon) {
+    if (current_index_ == size() - 1) {
+      arrived_ = true;
+    } else {
+      if (current_index_ == size() - 2) {
+        approaching_destination_ = true;
       }
-    }
-  } else {
-    if (!current_lane->IsInLane(position)) {
       ++current_index_;
     }
   }
-  if (current_index_ == size() - 1) approaching_destination_ = true;
 }
 
+bool RouteSequence::IsWithInLane(const Eigen::Vector2d position) {
+  auto current_lane = hdmap::LaneMap::GetLane(at(current_index_).id());
+  auto proj = current_lane->GetProjection(position);
+  if (std::fabs(proj.second) <= 0.3)
+    return true;
+  else
+    return false;
+}
+
+void RouteSequence::RemoveOldestRoute() {
+  pop_front();
+  --current_index_;
+}
+
+void RouteSequence::ChangeMainAction(const hdmap::LaneSegmentBehavior type) {
+  for (auto it = begin(); it < end(); ++it) {
+    it->set_main_action(type);
+  }
+}
+
+void RouteSequence::AddRoute(const RouteSegment& route_segment) {
+  push_back(route_segment);
+  arrived_ = false;
+  approaching_destination_ = false;
+}
+
+void RouteSequence::Reset() {
+  clear();
+  current_index_ = 0;
+  num_of_segments_ = 0;
+  arrived_ = false;
+  approaching_destination_ = false;
+}
 }  // namespace planning

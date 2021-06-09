@@ -5,6 +5,7 @@
 #include <geometry_msgs/PoseStamped.h>
 #include <glog/logging.h>
 #include <ros/ros.h>
+#include <sensor_msgs/Joy.h>
 
 #include <memory>
 #include <mutex>
@@ -27,13 +28,18 @@ class PlanningCore {
 
  private:
   void NewRouteCallBack(const geometry_msgs::PoseStamped& goal);
+  void JoyCallBack(const sensor_msgs::Joy& joy);
   bool UpdateDataFrame();
 
  private:
   std::mutex route_mutex_;
+  bool random_drive_mode_ = false;
   bool has_new_route_ = false;
   ros::Subscriber route_target_sub_;
   geometry_msgs::PoseStamped route_goal_;
+
+  ros::Subscriber joy_sub_;
+  int suggest_lane_change_ = 0;
 
   NavigationMap navigation_map_;
   std::shared_ptr<DataFrame> data_frame_;

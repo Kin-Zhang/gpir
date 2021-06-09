@@ -20,6 +20,7 @@ void PlanningCore::Init() {
   load_param &= node.getParam("simulator", simulator);
   load_param &= node.getParam("town", town);
   load_param &= node.getParam("map_path", map_path);
+  load_param &= node.getParam("random_drive_mode", random_drive_mode_);
   if (!load_param) LOG(FATAL) << "fail to init param";
 
   // init hdmap
@@ -43,6 +44,7 @@ void PlanningCore::Init() {
   data_frame_ = std::make_shared<DataFrame>();
   route_target_sub_ = node.subscribe("/move_base_simple/goal", 10,
                                      &PlanningCore::NewRouteCallBack, this);
+  joy_sub_ = node.subscribe("/joy", 10, &PlanningCore::JoyCallBack, this);
 
   // init predictor
   mock_predictor_ = std::make_unique<ConstVelPredictor>(6, 0.2);
@@ -61,19 +63,40 @@ void PlanningCore::Run(const ros::TimerEvent&) {
 
   mock_predictor_->GeneratePrediction(&data_frame_->obstacles);
   navigation_map_.Update(data_frame_);
-  {
+
+  if (!random_drive_mode_) {
+    // point-to-point mode
     std::lock_guard<std::mutex> lock(route_mutex_);
     if (has_new_route_) {
       navigation_map_.CreateTask(route_goal_);
       has_new_route_ = false;
     }
+    if (!navigation_map_.HasActiveTask()) {
+      LOG_EVERY_N(INFO, 20) << "no active task";
+      navigation_map_.mutable_trajectory()->clear();
+      simulator_->SetTrajectory(navigation_map_.trajectory());
+      return;
+    }
+  } else {
+    // random driving mode
+    if (has_new_route_) {
+      if (!navigation_map_.RandomlyUpdateRoute()) {
+        navigation_map_.mutable_trajectory()->clear();
+        simulator_->SetTrajectory(navigation_map_.trajectory());
+        return;
+      }
+    } else {
+      navigation_map_.mutable_trajectory()->clear();
+      simulator_->SetTrajectory(navigation_map_.trajectory());
+      return;
+    }
   }
 
-  if (!navigation_map_.HasActiveTask()) {
-    LOG_EVERY_N(INFO, 20) << "no active task";
-    navigation_map_.mutable_trajectory()->clear();
-    simulator_->SetTrajectory(navigation_map_.trajectory());
-    return;
+  if (suggest_lane_change_) {
+    if (navigation_map_.SuggestLaneChange(
+            static_cast<hdmap::LaneSegmentBehavior>(suggest_lane_change_))) {
+      suggest_lane_change_ = 0;
+    }
   }
 
   navigation_map_.UpdateReferenceLine();
@@ -87,6 +110,25 @@ void PlanningCore::NewRouteCallBack(const geometry_msgs::PoseStamped& goal) {
   std::lock_guard<std::mutex> lock(route_mutex_);
   route_goal_ = goal;
   has_new_route_ = true;
+}
+
+void PlanningCore::JoyCallBack(const sensor_msgs::Joy& joy) {
+  if (joy.buttons[2] == 1) {
+    LOG(INFO) << "Suggest left lane change by joy";
+    suggest_lane_change_ = 1;
+  } else if (joy.buttons[1] == 1) {
+    LOG(INFO) << "Suggest right lane change by joy";
+    suggest_lane_change_ = 2;
+  } else if (joy.buttons[3] == 1) {
+    LOG(INFO) << "Increate reference speed";
+    navigation_map_.AdjustReferenceSpeed(1);
+  } else if (joy.buttons[0] == 1) {
+    LOG(INFO) << "Increate reference speed";
+    navigation_map_.AdjustReferenceSpeed(-1);
+  } else if (joy.buttons[5] == 1) {
+    LOG(INFO) << "Add virtual Obstacles";
+    navigation_map_.RandomlyAddVirtualObstacles();
+  }
 }
 
 bool PlanningCore::UpdateDataFrame() {

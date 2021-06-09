@@ -14,6 +14,13 @@ namespace jsk_msgs = jsk_recognition_msgs;
 
 class PlanningVisual {
  public:
+  static void FillHeader(std_msgs::Header* header);
+
+  static void SetScaleAndColor(const std::array<double, 3>& scale,
+                               common::Color,
+                               visualization_msgs::Marker* marker,
+                               const double alpha = 1.0);
+
   static void BBoxToSolidCubeMarker(const common::Box2D& bbox,
                                     common::Color color,
                                     visualization_msgs::Marker* maker);
@@ -32,5 +39,11 @@ class PlanningVisual {
 
   static void GetTrafficConeMarker(const Eigen::Vector2d& pos, const int id,
                                    visualization_msgs::Marker* marker);
+
+  static void Get2DBoxMarker(const Eigen::Vector2d& pos, const double width,
+                             const double length, const double heading,
+                             common::Color color,
+                             const std::array<double, 3>& scale,
+                             visualization_msgs::Marker* marker);
 };
 }  // namespace planning

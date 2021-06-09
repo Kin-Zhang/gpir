@@ -2,8 +2,9 @@
 
 #include "common/frenet/frenet_transform.h"
 
-#include "common/utils/math.h"
 #include <glog/logging.h>
+
+#include "common/utils/math.h"
 
 namespace common {
 
@@ -55,6 +56,7 @@ void FrenetTransfrom::FrenetStateToState(const FrenetState& frenet_state,
   const double delta_theta = std::atan2(frenet_state.d[1], one_minus_kappa_rd);
   const double cos_delta_theta = std::cos(delta_theta);
 
+  state->s = ref.s;
   state->position = normal * frenet_state.d[0] + ref.point;
   state->velocity = frenet_state.s[1] * one_minus_kappa_rd / cos_delta_theta;
   state->heading = NormalizeAngle(delta_theta + ref.theta);

@@ -43,14 +43,14 @@ class MpcController {
   double ts_ = 0.05;
   double ls_ = 0.0;
   int horizon_ = 20;
-  int predict_steps_ = 5;
+  int predict_steps_ = 2;
 
   double max_speed_ = 20.0;
   double min_speed_ = 0.0;
   double max_acc_ = 3.0;
   double min_acc_ = -5.0;
-  double max_steer_ = 50.0 * M_PI / 180.0;
-  double max_srate_ = 30.0 * M_PI / 180.0;
+  double max_steer_ = 60.0 * M_PI / 180.0;
+  double max_srate_ = 40.0 * M_PI / 180.0;
 
   Eigen::MatrixXd matrix_a_piao_;
   Eigen::MatrixXd matrix_b_piao_;

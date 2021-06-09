@@ -84,11 +84,13 @@ bool MpcController::CalculateAckermannDrive(
     return false;
   }
   auto ref_state = trajectory[ref_index];
+  auto preview_state =
+      trajectory[std::min<int>(ref_index + 10, trajectory.size() - 1)];
 
   MatrixXd matrix_a = MatrixXd::Zero(nx_, nx_);
   MatrixXd matrix_b = MatrixXd::Zero(nx_, nu_);
 
-  double ref_v = ref_state.velocity;
+  double ref_v = preview_state.velocity;
   double ref_theta = ref_state.heading;
   double ref_steer = std::atan(ls_ * ref_state.kappa);
 
@@ -124,7 +126,7 @@ bool MpcController::CalculateAckermannDrive(
   matrix_initial_x(4, 0) = std::min(
       std::max(last_control_[1] - ref_steer, matrix_xmin_relative_(4, 0)),
       matrix_xmax_relative_(4, 0));
-  std::cout << matrix_initial_x << std::endl;
+  // std::cout << matrix_initial_x << std::endl;
 
   MatrixXd matrix_ref = MatrixXd::Zero(nu_ + nx_, 1);
   std::vector<double> optimal_control;
@@ -153,7 +155,8 @@ bool MpcController::CalculateAckermannDrive(
 
   last_control_[0] = optimal_speed;
   last_control_[1] = optimal_steer;
-  LOG(WARNING) << "speed: " << optimal_speed << ", steer: " << optimal_steer
+  LOG(WARNING) << "ref speed: " << ref_v << ", speed: " << optimal_speed
+               << ", steer: " << optimal_steer
                << ", acc: " << optimal_control[0] / ts_;
   RecordControlCommand(optimal_speed, optimal_steer);
 

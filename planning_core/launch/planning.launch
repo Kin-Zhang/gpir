@@ -1,13 +1,20 @@
 <launch>
 
 <arg name="map_path" default="$(find hdmap)/maps/"/>
-<arg name="town" default="Town02"/>
+<arg name="town" default="Town05"/>
 <arg name="simulator" default="Carla"/>
 
 <node pkg="planning_core" name="planning" type="planning" output="screen">
   <param name="town" value="$(arg town)"/>
   <param name="simulator" value="$(arg simulator)"/>
   <param name="map_path" value="$(arg map_path)"/>
+  <param name="random_drive_mode" value="true"/>
+</node>
+
+<node pkg="planning_core" name="carla_controller" type="carla_controller">
+  <param name="kp" value="0.8"/>
+  <param name="ki" value="0.07"/>
+  <param name="kd" value="0.1"/>
 </node>
 
 <!-- rviz -->

@@ -3,9 +3,13 @@
 #include "gp_planner/st_plan/st_graph.h"
 
 #include <glog/logging.h>
+#include <omp.h>
 
+#include <fstream>
 #include <random>
 
+#include "common/frenet/frenet_transform.h"
+#include "common/smoothing/osqp_spline1d_solver.h"
 #include "common/utils/timer.h"
 #include "gp_planner/thirdparty/matplotlib-cpp/matplotlibcpp.h"
 
@@ -20,9 +24,14 @@ void StGraph::BuildStGraph(const std::vector<Obstacle>& dynamic_obstacles,
   int size = dynamic_obstacles.size();
   st_block_segments_.resize(size);
 
-  for (int i = 0; i < size; ++i) {
-    GetObstacleBlockSegment(dynamic_obstacles[i], gp_path,
-                            &st_block_segments_[i]);
+  LOG(INFO) << "projection size: " << size;
+  omp_set_num_threads(size);
+  {
+#pragma omp parallel for
+    for (int i = 0; i < size; ++i) {
+      GetObstacleBlockSegment(dynamic_obstacles[i], gp_path,
+                              &st_block_segments_[i]);
+    }
   }
   timer.End("projection step");
   timer.Reset();
@@ -30,7 +39,7 @@ void StGraph::BuildStGraph(const std::vector<Obstacle>& dynamic_obstacles,
   OccupancyMap grid_map;
   grid_map.set_origin({0.0, init_s_[0]});
   grid_map.set_resolution({0.1, 0.1});
-  grid_map.set_cell_number({82, 1000});
+  grid_map.set_cell_number({82, 1500});
 
   vector_Eigen<Eigen::Vector2d> corners;
   corners.resize(4);
@@ -40,7 +49,6 @@ void StGraph::BuildStGraph(const std::vector<Obstacle>& dynamic_obstacles,
     for (const auto& st_points : st_block_segment) {
       if (st_points.empty()) continue;
       if (st_points.size() == 1) {
-        corners.clear();
         corners[0] = Eigen::Vector2d(st_points[0].t, st_points[0].s_l);
         corners[1] = Eigen::Vector2d(st_points[0].t, st_points[0].s_u);
         corners[2] = Eigen::Vector2d(st_points[0].t + 0.1, st_points[0].s_u);
@@ -49,11 +57,10 @@ void StGraph::BuildStGraph(const std::vector<Obstacle>& dynamic_obstacles,
         continue;
       }
       for (size_t i = 0; i < st_points.size() - 1; ++i) {
-        corners.clear();
-        corners.emplace_back(st_points[i].t, st_points[i].s_l);
-        corners.emplace_back(st_points[i].t, st_points[i].s_u);
-        corners.emplace_back(st_points[i + 1].t, st_points[i + 1].s_u);
-        corners.emplace_back(st_points[i + 1].t, st_points[i + 1].s_l);
+        corners[0] = Eigen::Vector2d(st_points[i].t, st_points[i].s_l);
+        corners[1] = Eigen::Vector2d(st_points[i].t, st_points[i].s_u);
+        corners[2] = Eigen::Vector2d(st_points[i + 1].t, st_points[i + 1].s_u);
+        corners[3] = Eigen::Vector2d(st_points[i + 1].t, st_points[i + 1].s_l);
         grid_map.FillConvexPoly(corners);
       }
     }
@@ -62,12 +69,13 @@ void StGraph::BuildStGraph(const std::vector<Obstacle>& dynamic_obstacles,
   timer.End("fill step");
   timer.Reset();
   sdf_ = std::make_unique<SignedDistanceField2D>(std::move(grid_map));
+  // takes about 1.5 ms, is this necessary?
   sdf_->UpdateVerticalSDF();
   timer.End("sdf update");
 
-  cv::imshow("st", sdf_->occupancy_map().BinaryImage());
-  cv::imshow("st_sdf", sdf_->esdf().ImageSec());
-  cv::waitKey(0);
+  // cv::imshow("st", sdf_->occupancy_map().BinaryImage());
+  // cv::imshow("st_sdf", sdf_->esdf().ImageSec());
+  // cv::waitKey(0);
 }
 
 void StGraph::GetObstacleBlockSegment(
@@ -158,8 +166,14 @@ bool StGraph::TopKSearch(const int k) {
   return true;
 }
 
-bool StGraph::LocalTopSearch(const int k) {
-  CHECK(k % 2 == 1);
+void StGraph::SetReferenceSpeed(const double ref_v) const {
+  StNode::SetReferenceSpeed(ref_v);
+}
+
+bool StGraph::SearchWithLocalTruncation(const int k,
+                                        std::vector<StNode>* result) {
+  CHECK(k % 2 == 1) << "k needs to be an odd number, while k is " << k;
+
   int num_a_per_side = static_cast<int>(k / 2.0);
   std::vector<double> discrete_a;
   discrete_a.reserve(k);
@@ -170,45 +184,43 @@ bool StGraph::LocalTopSearch(const int k) {
   }
 
   StNodeWeights weight;
-  weight.control = 0.1;
-  weight.obstacle = 1;
-  weight.ref_v = 0.1;
+  // weight.control = 0.5;
+  weight.obstacle = 10;
+  weight.ref_v = 3;
   StNode::SetWeights(weight);
-  StNode::SetReferenceSpeed(15.0);
+  // StNode::SetReferenceSpeed(15.0);
 
-  LOG(INFO) << "prepare a ok";
   std::unique_ptr<StNode> inital_node =
-      std::make_unique<StNode>(init_s_[0], init_s_[1]);
+      std::make_unique<StNode>(init_s_[0], init_s_[1], init_s_[2]);
   search_tree_.resize(9);
   search_tree_[0].emplace_back(std::move(inital_node));
 
-  LOG(INFO) << "prepare tree ok";
-
-  std::random_device rd;   // obtain a random number from hardware
-  std::mt19937 gen(rd());  // seed the generator
-  std::uniform_int_distribution<> distr(9, 81);  // define the range
+  LOG(INFO) << "[search tree] init velocity: " << init_s_[1];
+  LOG(INFO) << "[search tree] reference velocity: "
+            << StNode::reference_speed();
 
   TIC;
   double t_expand = 0.0;
   double t_sort = 0.0;
   double t_compare = 0.0;
   double kEpsilon = 0.1;
+
   for (int i = 0; i < 8; ++i) {
     std::vector<std::unique_ptr<StNode>> cache;
 
     auto t0 = std::chrono::high_resolution_clock::now();
-    LOG(INFO) << "expand num: " << search_tree_[i].size() * discrete_a.size();
+    // LOG(INFO) << "iter: " << i
+    //           << ", expand num: " << search_tree_[i].size() * discrete_a.size();
     for (int j = 0; j < search_tree_[i].size(); ++j) {
       for (const auto& a : discrete_a) {
         auto next_node = search_tree_[i][j]->Forward(1.0, a);
         if (next_node->v < 0) continue;  // TODO: can optimize
         for (int k = 1; k <= 5; ++k) {
-          double tt, ss, dd;
           next_node->CalObstacleCost(sdf_->SignedDistance(
               Eigen::Vector2d(search_tree_[i][j]->t + k / 5.0,
                               search_tree_[i][j]->GetDistance(k / 5.0, a))));
         }
-        if (next_node->cost < 1e5) {
+        if (next_node->cost < 1e9) {
           cache.emplace_back(std::move(next_node));
         }
       }
@@ -225,15 +237,17 @@ bool StGraph::LocalTopSearch(const int k) {
 
     if (cache.empty()) {
       LOG(ERROR) << "cannot find valid path";
+      result = nullptr;
       return false;
     }
 
     int min_index = 0;
     int min_cost = cache[0]->cost;
+    double start_s = cache[0]->s;
     bool is_new_group = false;
 
-    for (size_t j = 0; j < cache.size(); ++j) {
-      if (cache[j]->s - cache[min_index]->s <= kEpsilon) {
+    for (int j = 0; j < cache.size(); ++j) {
+      if (cache[j]->s - start_s <= kEpsilon) {
         if (cache[j]->cost < min_cost) {
           min_cost = cache[j]->cost;
           min_index = j;
@@ -243,27 +257,106 @@ bool StGraph::LocalTopSearch(const int k) {
       }
 
       if (is_new_group || j == cache.size() - 1) {
+        start_s = cache[j]->s;
         search_tree_[i + 1].emplace_back(std::move(cache[min_index]));
         min_index = j + 1;
         is_new_group = false;
       }
     }
+
     auto t3 = std::chrono::high_resolution_clock::now();
     t_compare +=
         std::chrono::duration_cast<std::chrono::nanoseconds>(t3 - t2).count();
 
-    kEpsilon *= 1.5;
+    kEpsilon *= 1.3;
   }
   std::sort(
       search_tree_.back().begin(), search_tree_.back().end(),
-      [](const std::unique_ptr<StNode>& n0, const std::unique_ptr<StNode>& n2) {
-        return n0->cost < n2->cost;
+      [](const std::unique_ptr<StNode>& n1, const std::unique_ptr<StNode>& n2) {
+        return n1->cost < n2->cost;
       });
   TOC("Local Top K search");
   LOG(INFO) << "t sorting: " << t_sort / 1e6;
   LOG(INFO) << "t expand: " << t_expand / 1e6;
   LOG(INFO) << "t compare: " << t_compare / 1e6;
+
+  // extract answer
+  const StNode* current_node = search_tree_.back().front().get();
+  // result->emplace_back(*current_node);
+  st_nodes_.emplace_back(*current_node);
+  while (current_node->parent != nullptr) {
+    current_node = current_node->parent;
+    // result->emplace_back(*current_node);
+    st_nodes_.emplace_back(*current_node);
+  }
+  // std::reverse(result->begin(), result->end());
+  std::reverse(st_nodes_.begin(), st_nodes_.end());
+
   return true;
+}
+
+bool StGraph::OptimizeTest() {
+  // common::OsqpSpline2dSolver
+  TIC;
+  std::vector<double> t_knots;
+  std::vector<double> lbs;
+  std::vector<double> ubs;
+  std::vector<double> refs;
+  double lb, ub;
+  const auto& grid_map = sdf_->occupancy_map();
+  for (const auto& node : st_nodes_) {
+    t_knots.emplace_back(node.t);
+    grid_map.FindVerticalBoundary(node.t, node.s, &lb, &ub);
+    lbs.emplace_back(lb);
+    ubs.emplace_back(ub);
+    refs.emplace_back(node.s);
+  }
+
+  common::OsqpSpline1dSolver solver(t_knots, 5);
+  auto kernel = solver.mutable_kernel();
+  kernel->AddRegularization(1e-5);
+  kernel->AddSecondOrderDerivativeMatrix(5);
+  kernel->AddThirdOrderDerivativeMatrix(20);
+  auto constraint = solver.mutable_constraint();
+  constraint->AddThirdDerivativeSmoothConstraint();
+  const auto& s0 = st_nodes_.front();
+  constraint->AddPointConstraint(t_knots.front(), init_s_[0]);
+  constraint->AddPointDerivativeConstraint(t_knots.front(), init_s_[1]);
+  constraint->AddPointSecondDerivativeConstraint(t_knots.front(), init_s_[2]);
+  constraint->AddBoundary(t_knots, lbs, ubs);
+  kernel->AddReferenceLineKernelMatrix(t_knots, refs, 20);
+
+  if (!solver.Solve()) {
+    LOG(ERROR) << "fail to optimize";
+    return false;
+  }
+
+  st_spline_ = solver.spline();
+  TOC("st optimization");
+
+  return true;
+}
+
+void StGraph::GenerateTrajectory(const ReferenceLine& reference_line,
+                                 const GPPath& gp_path,
+                                 common::Trajectory* trajectory) {
+  trajectory->clear();
+  const double t_final = st_nodes_.back().t;
+  // LOG(INFO) << "t_final: " << t_final;
+  common::State state;
+  Eigen::Vector3d d;
+  for (double t = 0.0; t <= t_final; t += 0.1) {
+    Eigen::Vector3d s(st_spline_(t), st_spline_.Derivative(t),
+                      st_spline_.SecondOrderDerivative(t));
+    gp_path.GetInterpolateNode(s[0], &d);
+    common::FrenetTransfrom::FrenetStateToState(
+        common::FrenetState(s, d), reference_line.GetFrenetReferncePoint(s[0]),
+        &state);
+    state.frenet_d = d;
+    state.frenet_s = s;
+    trajectory->emplace_back(state);
+  }
+  LOG(WARNING) << "final v: " << trajectory->back().velocity;
 }
 
 void StGraph::VisualizeStGraph() {
@@ -297,6 +390,7 @@ void StGraph::VisualizeStGraph() {
   std::vector<double> t, s;
   for (int i = 1; i < search_tree_.size(); ++i) {
     if (search_tree_[i].empty()) break;
+    int count = 0;
     for (const auto& node : search_tree_[i]) {
       if (node->parent == nullptr) continue;
       t.clear();
@@ -324,22 +418,89 @@ void StGraph::VisualizeStGraph() {
     current_node = current_node->parent;
   }
 
+  // optimized s-t curve
+  if (!st_spline_.x_knots().empty()) {
+    t.clear();
+    s.clear();
+    const double t_final = st_nodes_.back().t;
+    for (double i = 0; i < t_final; i += 0.1) {
+      t.emplace_back(i);
+      s.emplace_back(st_spline_(i));
+    }
+    std::map<std::string, std::string> keywords{{"linewidth", "2"},
+                                                {"color", "b"}};
+    plt::plot(t, s, keywords);
+  }
+
   double v0 = init_s_[1];
   double a_max = 2;
   std::vector<double> s_min, s_max;
   t.clear();
   for (double i = 0; i < 8; i += 0.1) {
     t.emplace_back(i);
-    s_max.emplace_back(init_s_[0] + v0 * i + 0.5 * a_max * i * i);
-    s_min.emplace_back(init_s_[0] + v0 * i - 0.5 * a_max * i * i);
+    s_max.emplace_back(init_s_[0] + v0 * i + 0.5 * a_max_ * i * i);
+    s_min.emplace_back(init_s_[0] + v0 * i + 0.5 * a_min_ * i * i);
   }
 
-  plt::plot(t, s_min, "r");
-  plt::plot(t, s_max, "r");
+  plt::plot(t, s_min, "k");
+  plt::plot(t, s_max, "k");
 
   plt::xlim(0, 9);
   plt::ylim(0, 105);
   plt::show();
 }
 
+void DotLog(std::ofstream& os) { os << std::endl; }
+
+template <typename Data, typename... Args>
+void DotLog(std::ofstream& os, Data&& data, Args&&... args) {
+  os << std::forward<Data>(data) << ",";
+  DotLog(os, std::forward<Args>(args)...);
+}
+
+void StGraph::SaveSnapShot(const std::string& path) {
+  std::string br = path + "/block_region.csv";
+  std::string st = path + "/st_node.csv";
+  std::ofstream os_br = std::ofstream(br, std::ios::trunc);
+  std::ofstream os_st = std::ofstream(st, std::ios::trunc);
+
+  DotLog(os_br, "x1", "x2", "x3", "x5", "x4", "y1", "y2", "y3", "y4", "y5");
+  vector_Eigen<Eigen::Vector2d> corners;
+  corners.resize(4);
+  for (const auto& st_block_segment : st_block_segments_) {
+    if (st_block_segment.empty()) continue;
+    for (const auto& st_points : st_block_segment) {
+      if (st_points.size() <= 1) continue;
+      for (size_t i = 0; i < st_points.size() - 1; ++i) {
+        std::vector<double> obs_x, obs_y;
+        corners.clear();
+        corners.emplace_back(st_points[i].t, st_points[i].s_l);
+        corners.emplace_back(st_points[i].t, st_points[i].s_u);
+        corners.emplace_back(st_points[i + 1].t, st_points[i + 1].s_u);
+        corners.emplace_back(st_points[i + 1].t, st_points[i + 1].s_l);
+        DotLog(os_br, corners[0].x(), corners[1].x(), corners[2].x(),
+               corners[3].x(), corners[0].x(), corners[0].y(), corners[1].y(),
+               corners[2].y(), corners[3].y(), corners[0].y());
+      }
+    }
+  }
+  os_br.close();
+
+  DotLog(os_st, "s0", "v0", "a", "t0", "tf", "opt");
+  for (int i = 1; i < search_tree_.size(); ++i) {
+    if (search_tree_[i].empty()) break;
+    for (const auto& node : search_tree_[i]) {
+      if (node->parent == nullptr) continue;
+      DotLog(os_st, node->parent->s, node->parent->v, node->a, node->parent->t,
+             node->t - node->parent->t, 0);
+    }
+  }
+  const StNode* node = search_tree_.back().front().get();
+  while (node->parent) {
+    DotLog(os_st, node->parent->s, node->parent->v, node->a, node->parent->t,
+           node->t - node->parent->t, 1);
+    node = node->parent;
+  }
+  os_st.close();
+}
 }  // namespace planning

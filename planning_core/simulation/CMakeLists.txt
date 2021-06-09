@@ -1,4 +1,5 @@
 find_package(catkin REQUIRED COMPONENTS
+  carla_msgs
   ackermann_msgs
 )
 

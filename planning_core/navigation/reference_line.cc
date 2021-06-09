@@ -103,6 +103,13 @@ double ReferenceLine::GetArcLength(const Eigen::Vector2d& position,
   return (lb + ub) / 2;
 }
 
+Eigen::Vector3d ReferenceLine::GetSE2(const double s) const {
+  Eigen::Vector3d se2;
+  se2.topRows(2) = spline_.pos(s) + origin_;
+  se2(2) = spline_.theta(s);
+  return se2;
+}
+
 common::FrenetReferencePoint ReferenceLine::GetFrenetReferncePoint(
     const double s) const {
   common::FrenetReferencePoint ref;
@@ -121,7 +128,6 @@ common::FrenetReferencePoint ReferenceLine::GetFrenetReferncePoint(
 void ReferenceLine::ToFrenetState(const common::State& state,
                                   common::FrenetState* frenet_state) const {
   auto reference_point = GetFrenetReferncePoint(state.position);
-  LOG(INFO) << reference_point.DebugString();
   common::FrenetTransfrom::StateToFrenetState(state, reference_point,
                                               frenet_state);
 }
@@ -182,7 +188,7 @@ void ReferenceLine::GetFrenetPoint(const Eigen::Vector2d& pos, const double s,
   frenet_point->d = vec.y() * cos - vec.x() * sin;
 }
 
-geometry_msgs::Pose ReferenceLine::GetRosPose(const double s) {
+geometry_msgs::Pose ReferenceLine::GetRosPose(const double s) const {
   geometry_msgs::Pose pose;
   auto pos = spline_.pos(s) + origin_;
   pose.position.x = pos.x();

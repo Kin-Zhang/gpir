@@ -27,7 +27,7 @@ constexpr double kEpsilon = 1.8;
 constexpr double kQc = 0.1;
 
 bool GPPathOptimizer::GenerateGPPath(const ReferenceLine& reference_line,
-                                     const common::State& state,
+                                     const common::FrenetState& frenet_state,
                                      const double length, const double s,
                                      common::Trajectory* trajectory,
                                      GPPath* gp_path) {
@@ -35,23 +35,22 @@ bool GPPathOptimizer::GenerateGPPath(const ReferenceLine& reference_line,
   auto pose_fix_cost2 =
       gtsam::noiseModel::Diagonal::Sigmas(Vector3(1, 0.1, 0.1));
   auto pose_fix_cost3 =
-      gtsam::noiseModel::Diagonal::Sigmas(Vector3(20, 1e9, 1e9));
+      gtsam::noiseModel::Diagonal::Sigmas(Vector3(30, 1e9, 1e9));
   const double delta_s = length / (num_of_nodes_ - 1);
 
   s_refs_.clear();
   if (!graph_.empty()) graph_.resize(0);
-  LOG(INFO) << 1.1;
   // * init state
-  common::FrenetState frenet_state;
-  reference_line.ToFrenetState(state, &frenet_state);
-  LOG(INFO) << frenet_state.DebugString();
-  LOG(INFO) << state.DebugString();
-  frenet_state.d[0] = state.debug(0);
-  frenet_state.d[1] = state.debug(1);
-  frenet_state.d[2] = state.debug(2);
-  printf("previous: (%f, %f, %f), now (%f, %f, %f)\n", state.debug(0),
-         state.debug(1), state.debug(2), frenet_state.d[0], frenet_state.d[1],
-         frenet_state.d[2]);
+  // common::FrenetState frenet_state;
+  // reference_line.ToFrenetState(state, &frenet_state);
+  // LOG(INFO) << frenet_state.DebugString();
+  // LOG(INFO) << state.DebugString();
+  // frenet_state.d[0] = state.debug(0);
+  // frenet_state.d[1] = state.debug(1);
+  // frenet_state.d[2] = state.debug(2);
+  // printf("previous: (%f, %f, %f), now (%f, %f, %f)\n", state.debug(0),
+  //        state.debug(1), state.debug(2), frenet_state.d[0], frenet_state.d[1],
+  //        frenet_state.d[2]);
 
   Vector3 x0(frenet_state.d[0], frenet_state.d[1], frenet_state.d[2]);
   Vector3 xn(0, 0, 0);
@@ -80,7 +79,7 @@ bool GPPathOptimizer::GenerateGPPath(const ReferenceLine& reference_line,
 
       graph_.add(GPPriorFactor(last_key, key, delta_s, kQc));
 
-      if (std::fabs(current_s - s) > 6) {
+      if (std::fabs(current_s - s) > 20) {
         graph_.add(PriorFactor3(key, x_ref, pose_fix_cost3));
       }
       graph_.add(
@@ -104,8 +103,8 @@ bool GPPathOptimizer::GenerateGPPath(const ReferenceLine& reference_line,
   std::vector<std::vector<std::pair<double, double>>> boundaries;
   std::vector<double> seeds;
   seeds.emplace_back(s);
-  sdf_->mutable_occupancy_map()->SearchForVeticalBoundaries(seeds, &boundaries);
-  // sdf_->mutable_occupancy_map()->SearchForVeticalBoundaries(s_refs_,
+  sdf_->mutable_occupancy_map()->SearchForVerticalBoundaries(seeds, &boundaries);
+  // sdf_->mutable_occupancy_map()->SearchForVerticalBoundaries(s_refs_,
   //                                                           &boundaries);
   gtsam::Values init_values;
   std::vector<Eigen::Vector3d> resa, tmp;
@@ -151,7 +150,7 @@ bool GPPathOptimizer::GenerateGPPath(const ReferenceLine& reference_line,
   for (int i = 0; i < s_refs_.size(); ++i) {
     init_line.emplace_back(Eigen::Vector2d(s_refs_[i], l[i]));
   }
-  sdf_->mutable_occupancy_map()->PolyLine(init_line);
+  // sdf_->mutable_occupancy_map()->PolyLine(init_line);
 
   int inter_num = 20;
   double delta_tau = delta_s / (inter_num + 1);
@@ -187,15 +186,15 @@ bool GPPathOptimizer::GenerateGPPath(const ReferenceLine& reference_line,
     gp_path_nodes->emplace_back(x1);
   }
 
-  for (double i = start_s; i <= start_s + length; i += 1.0) {
-    gp_path->GetState(i, &traj_state);
-    trajectory->emplace_back(traj_state);
-  }
+  // for (double i = start_s; i <= start_s + length; i += 1.0) {
+  //   gp_path->GetState(i, &traj_state);
+  //   trajectory->emplace_back(traj_state);
+  // }
 
-  vector_Eigen<Eigen::Vector2d> points;
-  for (int i = 0; i < x.size(); ++i) {
-    points.emplace_back(Eigen::Vector2d(t[i], x[i]));
-  }
+  // vector_Eigen<Eigen::Vector2d> points;
+  // for (int i = 0; i < x.size(); ++i) {
+  //   points.emplace_back(Eigen::Vector2d(t[i], x[i]));
+  // }
 
   // sdf_->mutable_occupancy_map()->PolyLine(points);
   // cv::imshow("path", sdf_->occupancy_map().BinaryImage());

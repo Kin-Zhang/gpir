@@ -64,7 +64,7 @@ class GridMap2D {
   inline int Index2Address(const Eigen::Vector2i& index) const;
   inline void Coordinate2Index(const Eigen::Vector2d& coord,
                                Eigen::Vector2i* index) const;
-  inline void Index2Coordiante(const Eigen::Vector2i& index,
+  inline void Index2Coordinate(const Eigen::Vector2i& index,
                                Eigen::Vector2d* coord) const;
 
   inline bool IsInMap(const Eigen::Vector2i& index) const;
@@ -82,7 +82,7 @@ class GridMap2D {
   inline bool IsOccupied(const int index_x, const int index_y) const;
   inline bool IsOccupied(const Eigen::Vector2d& coord) const;
 
-  // should only used for debug and visualization, data is copied on every call
+  // only used for debug and visualization, data is copied on every call
   Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> Matrix()
       const;
   cv::Mat ImageSec() const;
@@ -99,9 +99,13 @@ class GridMap2D {
  public:
   // void ShowGradientFeild();
 
-  void SearchForVeticalBoundaries(
+  void SearchForVerticalBoundaries(
       const std::vector<double> x_coords,
-      std::vector<std::vector<std::pair<double, double>>>* vetical_boundaries);
+      std::vector<std::vector<std::pair<double, double>>>* vertical_boundaries)
+      const;
+
+  void FindVerticalBoundary(const double x, const double y, double* lb,
+                            double* ub) const;
 
  protected:
   inline void InitStepAndSize();
@@ -223,7 +227,7 @@ inline void GridMap2D<T>::Coordinate2Index(const Eigen::Vector2d& coord,
 }
 
 template <typename T>
-inline void GridMap2D<T>::Index2Coordiante(const Eigen::Vector2i& index,
+inline void GridMap2D<T>::Index2Coordinate(const Eigen::Vector2i& index,
                                            Eigen::Vector2d* coord) const {
   (*coord)(0) = (index(0) + 0.5) * cell_resolution_[0] + origin_[0];
   (*coord)(1) = (index(1) + 0.5) * cell_resolution_[1] + origin_[1];
@@ -297,7 +301,7 @@ inline double GridMap2D<T>::GetValueBilinear(const Eigen::Vector2d& coord,
   BoundIndex(&index_lb);
 
   Eigen::Vector2d coord_lb, diff;
-  Index2Coordiante(index_lb, &coord_lb);
+  Index2Coordinate(index_lb, &coord_lb);
 
   diff(0) = (coord(0) - coord_lb(0)) * cell_resolution_inv_[0];
   diff(1) = (coord(1) - coord_lb(1)) * cell_resolution_inv_[1];
@@ -374,10 +378,11 @@ cv::Mat GridMap2D<T>::BinaryImage() const {
 }
 
 template <typename T>
-void GridMap2D<T>::SearchForVeticalBoundaries(
+void GridMap2D<T>::SearchForVerticalBoundaries(
     const std::vector<double> x_coords,
-    std::vector<std::vector<std::pair<double, double>>>* vetical_boundaries) {
-  vetical_boundaries->clear();
+    std::vector<std::vector<std::pair<double, double>>>* vertical_boundaries)
+    const {
+  vertical_boundaries->clear();
 
   for (const auto x_coord : x_coords) {
     const int x = std::floor((x_coord - origin_[0]) * cell_resolution_inv_[0]);
@@ -404,10 +409,40 @@ void GridMap2D<T>::SearchForVeticalBoundaries(
         }
       }
     }
-    vetical_boundaries->emplace_back(std::move(boundary));
+    vertical_boundaries->emplace_back(std::move(boundary));
   }
 }
 
+template <typename T>
+void GridMap2D<T>::FindVerticalBoundary(const double x, const double y,
+                                        double* lb, double* ub) const {
+  const int x_idx = std::floor((x - origin_[0]) * cell_resolution_inv_[0]);
+  const int y_idx = std::floor((y - origin_[1]) * cell_resolution_inv_[1]);
+  *lb = y, *ub = y;
+  int address = 0;
+
+  int current_y_idx = y_idx + 1;
+  while (current_y_idx < cell_num_[1]) {
+    address = Index2Address(x_idx, current_y_idx);
+    if (map_data_[address] == static_cast<T>(0)) {
+      ++current_y_idx;
+      *ub += cell_resolution_[1];
+    } else {
+      break;
+    }
+  }
+
+  current_y_idx = y_idx - 1;
+  while (current_y_idx >= 0) {
+    address = Index2Address(x_idx, current_y_idx);
+    if (map_data_[address] == static_cast<T>(0)) {
+      --current_y_idx;
+      *lb -= cell_resolution_inv_[1];
+    } else {
+      break;
+    }
+  }
+}
 // template <typename T>
 // void GridMap2D<T>::ShowGradientFeild() {
 //   matplot::vector_1d x, y, u, v;

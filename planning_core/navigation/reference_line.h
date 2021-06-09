@@ -6,10 +6,10 @@
 
 #include "common/base/state.h"
 #include "common/base/trajectory.h"
+#include "common/base/type.h"
 #include "common/frenet/frenet_state.h"
 #include "common/smoothing/spline2d.h"
 #include "common/spline/quintic_spline2d.h"
-#include "common/base/type.h"
 #include "planning_core/navigation/route_segment.h"
 
 namespace planning {
@@ -26,6 +26,8 @@ class ReferenceLine {
 
   double GetArcLength(const Eigen::Vector2d& position,
                       const double epsilon = 1e-3) const;
+
+  Eigen::Vector3d GetSE2(const double s) const;
 
   void GetCurvature(const double s, double* kappa, double* dkappa) const;
 
@@ -51,10 +53,13 @@ class ReferenceLine {
 
   common::FrenetPoint GetRoughProjection(const Eigen::Vector2d& pos) const;
 
-  geometry_msgs::Pose GetRosPose(const double s);
+  geometry_msgs::Pose GetRosPose(const double s) const;
 
   inline const std::vector<int>& lane_id_list() const { return lane_id_list_; }
   inline std::vector<int>* mutable_lane_id_list() { return &lane_id_list_; }
+
+  void set_behavior(const hdmap::LaneSegmentBehavior type) { behavior_ = type; }
+  hdmap::LaneSegmentBehavior behavior() const { return behavior_; }
 
   void print();
 
@@ -64,17 +69,17 @@ class ReferenceLine {
 
  private:
   double max_interval_ = 10;
-
   Eigen::Vector2d origin_;
 
   std::vector<double> knots_;
   std::vector<double> paras_;
   vector_Eigen<Eigen::Vector2d> refs_;
-
   std::vector<int> lane_id_list_;
 
   // common::QuinticSpline2D spline_;
   common::Spline2d spline_;
+
+  hdmap::LaneSegmentBehavior behavior_ = hdmap::LaneSegmentBehavior::kKeep;
 };
 
 }  // namespace planning

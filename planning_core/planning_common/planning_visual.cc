@@ -13,6 +13,21 @@ using common::Color;
 using common::ColorMap;
 using common::CommonVisual;
 
+void PlanningVisual::FillHeader(std_msgs::Header* header) {
+  header->frame_id = "map";
+  header->stamp = ros::Time::now();
+}
+
+void PlanningVisual::SetScaleAndColor(const std::array<double, 3>& scale,
+                                      common::Color color,
+                                      visualization_msgs::Marker* marker,
+                                      const double alpha) {
+  marker->scale.x = scale[0];
+  marker->scale.y = scale[1];
+  marker->scale.z = scale[2];
+  marker->color = common::ColorMap::at(color, alpha).toRosMsg();
+}
+
 void PlanningVisual::BBoxToSolidCubeMarker(const common::Box2D& bbox,
                                            const Color color,
                                            visualization_msgs::Marker* marker) {
@@ -69,13 +84,13 @@ void PlanningVisual::ObstacleInfoToMarkerArray(
 
     marker_info.type = visualization_msgs::Marker::TEXT_VIEW_FACING;
     marker_info.action = visualization_msgs::Marker::MODIFY;
-    marker_info.color = ColorMap::at(Color::kWhite).toRosMsg();
-    marker_info.scale.z = 0.5;
+    marker_info.color = ColorMap::at(Color::kBlack).toRosMsg();
+    marker_info.scale.z = 1;
     marker_info.text = "ID: " + std::to_string(id) + "\n" +
                        common::to_string_with_precision(state.velocity, 2) +
                        " m/s";
     CommonVisual::PositionToPose(state.position, &marker_info.pose,
-                                 obstacle.height() * 2.0);
+                                 obstacle.height() * 2.5);
 
     markers->markers.emplace_back(marker_info);
   }
@@ -101,5 +116,37 @@ void PlanningVisual::GetTrafficConeMarker(const Eigen::Vector2d& pos,
   marker->pose.position.z = 0.1;
   tf::Quaternion q(0.0, -0.7071, -0.7071, 0.0);
   tf::quaternionTFToMsg(q, marker->pose.orientation);
+}
+
+void PlanningVisual::Get2DBoxMarker(const Eigen::Vector2d& pos,
+                                    const double width, const double length,
+                                    const double heading, common::Color color,
+                                    const std::array<double, 3>& scale,
+                                    visualization_msgs::Marker* marker) {
+  FillHeader(&marker->header);
+  SetScaleAndColor(scale, color, marker);
+  marker->type = visualization_msgs::Marker::LINE_LIST;
+  marker->action = visualization_msgs::Marker::MODIFY;
+  marker->pose.orientation.w = 1.0;
+
+  const double half_length = length / 2.0 - 0.1;
+  const double half_width = width / 2.0 + 0.1;
+
+  Eigen::Vector2d tangent(std::cos(heading), std::sin(heading));
+  Eigen::Vector2d normal(-std::sin(heading), std::cos(heading));
+  vector_Eigen2d corners{pos + half_length * tangent + half_width * normal,
+                         pos + half_length * tangent - half_width * normal,
+                         pos - half_length * tangent - half_width * normal,
+                         pos - half_length * tangent + half_width * normal};
+  geometry_msgs::Point point;
+  for (int i = 0; i < 4; ++i) {
+    for (int j = i; j < i + 2; ++j) {
+      int idx = j % 4;
+      point.x = corners[idx].x();
+      point.y = corners[idx].y();
+      point.z = 0.2;
+      marker->points.emplace_back(point);
+    }
+  }
 }
 }  // namespace planning

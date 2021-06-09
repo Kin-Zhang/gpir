@@ -42,7 +42,6 @@ add_subdirectory(gp)
 add_subdirectory(sdf)
 add_subdirectory(initializer)
 add_subdirectory(st_plan)
-# add_subdirectory(thirdparty/matplotplusplus)
 add_subdirectory(examples)
 
 add_library(gp_planner gp_planner.cc)

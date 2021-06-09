@@ -1,0 +1,29 @@
+<launch>
+  <arg name="host" default="localhost"/>
+  <arg name="port" default="2000"/>
+  <arg name="role_name" default="ego_vehicle"/>
+  <arg name="wait_for_ego" default="True"/>
+  <arg name='scenario_runner_path' default='$(env SCENARIO_RUNNER_PATH)'/><!-- path to scenario runner -->
+
+  <node pkg="rostopic" type="rostopic" name="publish_scenarios"
+    args="pub /carla/available_scenarios carla_ros_scenario_runner_types/CarlaScenarioList '{ 'scenarios':  
+      [
+        {
+          'name': 'FollowLeadingVehicle',
+          'scenario_file': '$(find carla_ad_demo)/config/FollowLeadingVehicle.xosc'
+        }
+      ]
+    }' -l"/>
+  <include file="$(find carla_ros_scenario_runner)/launch/carla_ros_scenario_runner.launch">
+    <arg name='host' value='$(arg host)'/>
+    <arg name='port' value='$(arg port)'/>
+    <arg name="role_name" value="$(arg role_name)"/>
+    <arg name="scenario_runner_path" value="$(arg scenario_runner_path)"/>
+    <arg name="wait_for_ego" value="True"/>
+  </include>
+
+  <!-- <node pkg="rviz" type="rviz" name="rviz1" args="-d $(find carla_ad_demo)/config/carla_ad_demo.rviz" required="true" output="screen">
+    <remap from="carla/ego_vehicle/spectator_pose" to="/carla/ego_vehicle/rgb_view/control/set_transform"/>
+  </node> -->
+
+</launch>

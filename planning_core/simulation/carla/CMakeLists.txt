@@ -22,7 +22,6 @@ target_link_libraries(planning_core_carla
   planning_core::common
 )
 
-
 add_executable(carla_tf carla_tf.cc)
 target_include_directories(carla_tf PRIVATE
   ${roscpp_INCLUDE_DIRS}
@@ -32,5 +31,15 @@ target_include_directories(carla_tf PRIVATE
 target_link_libraries(carla_tf
   ${tf_LIBRARIES}
   ${tf2_LIBRARIES}
+  ${roscpp_LIBRARIES}
+)
+
+add_executable(carla_controller carla_controller.cc)
+target_include_directories(carla_controller PRIVATE
+  ${ackermann_msgs_INCLUDE_DIRS}
+  ${carla_msgs_INCLUDE_DIRS}
+  ${roscpp_INCLUDE_DIRS}
+)
+target_link_libraries(carla_controller 
   ${roscpp_LIBRARIES}
 )

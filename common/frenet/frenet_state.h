@@ -27,38 +27,44 @@ struct FrenetReferencePoint {
   double theta = 0.0;
   double kappa = 0.0;
   double dkappa = 0.0;
-  ;
+
   std::string DebugString() const {
     std::ostringstream os;
-    os << "[FrenetReferencePoint] "
-       << "point: (" << point.x() << ", " << point.y() << "), "
-       << "s: " << s << ", "
-       << "theta: " << theta << ", "
-       << "kappa: " << kappa << ", "
-       << "dkappa: " << dkappa;
+    os << "[FrenetReferencePoint]:\n  "
+       << "point: (" << point.x() << ", " << point.y() << ")\n  "
+       << "s: " << s << "\n  "
+       << "theta: " << theta << "\n  "
+       << "kappa: " << kappa << "\n  "
+       << "dkappa: " << dkappa << "\n";
     return os.str();
   }
 };
 
 struct FrenetState {
+  FrenetState() = default;
+  FrenetState(const Eigen::Vector3d& s, const Eigen::Vector3d& d)
+      : s(s), d(d) {}
+
   enum class DerivativeType {
     kDs = 0,
     kDt = 1,
   };
 
-  std::array<double, 3> s;
-  std::array<double, 3> d;
+  Eigen::Vector3d s;
+  Eigen::Vector3d d;
   DerivativeType type = DerivativeType::kDs;
 
   FrenetPoint frenet_point() { return FrenetPoint(s[0], d[0]); }
 
   std::string DebugString() const {
     std::ostringstream os;
-    os << "[FrenetState] "
-       << "s: (" << s[0] << ", " << s[1] << ", " << s[2] << ") "
-       << "d: (" << d[0] << ", " << d[1] << ", " << d[2] << ")";
+    os << "[FrenetState]:\n  "
+       << "s: (" << s[0] << ", " << s[1] << ", " << s[2] << ")\n  "
+       << "d: (" << d[0] << ", " << d[1] << ", " << d[2] << ")\n";
     return os.str();
   }
+
+  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 };
 
 }  // namespace common
