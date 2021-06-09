@@ -29,7 +29,9 @@ class ReferenceLine {
 
   Eigen::Vector3d GetSE2(const double s) const;
 
-  void GetCurvature(const double s, double* kappa, double* dkappa) const;
+  void GetCurvature(const double s, double* kappa,
+                    double* dkappa) const;
+  double GetCurvature(const double s) const;
 
   common::FrenetReferencePoint GetFrenetReferncePoint(const double s) const;
 

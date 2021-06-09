@@ -21,9 +21,16 @@ class GPPathOptimizer {
   void set_sdf(std::shared_ptr<SignedDistanceField2D> sdf) { sdf_ = sdf; }
 
   bool GenerateGPPath(const ReferenceLine& reference_line,
-                      const common::FrenetState& frenet_state, const double length,
-                      const double s, common::Trajectory* trajectory,
+                      const common::FrenetState& initial_state,
+                      const double length,
+                      const std::vector<double>& obstacle_location_hint,
                       GPPath* gp_path);
+
+  bool DecideInitialPathBoundary(
+      const Eigen::Vector2d& init_pos, const double init_angle,
+      const std::vector<double>& obstacle_location_hint,
+      const std::vector<std::vector<std::pair<double, double>>>& boundaries,
+      std::vector<double>* lb, std::vector<double>* ub);
 
  private:
   int num_of_nodes_ = 21;
@@ -31,6 +38,9 @@ class GPPathOptimizer {
   std::vector<double> s_refs_;
   gtsam::NonlinearFactorGraph graph_;
   std::shared_ptr<SignedDistanceField2D> sdf_;
+
+  double ego_width_ = 2.1;
+  double ego_half_width_ = 1.0;
 };
 
 }  // namespace planning

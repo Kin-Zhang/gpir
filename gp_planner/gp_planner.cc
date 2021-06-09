@@ -75,9 +75,8 @@ void GPPlanner::PlanOnce(NavigationMap* navigation_map_) {
     // GP path planning
     GPPath gp_path;
     GPPathOptimizer gp_path_optimizer(sdf);
-    if (!gp_path_optimizer.GenerateGPPath(reference_line, frenet_state, 90, -1,
-                                          navigation_map_->mutable_trajectory(),
-                                          &gp_path)) {
+    if (!gp_path_optimizer.GenerateGPPath(reference_line, frenet_state, 90,
+                                          obstacle_location_hint, &gp_path)) {
       LOG(ERROR) << "GP path planning failed";
       return;
     }
