@@ -4,6 +4,7 @@
 <arg name="town" default="Town05"/>
 <arg name="simulator" default="Carla"/>
 
+<env name="LD_LIBRARY_PATH" value="$(env LD_LIBRARY_PATH):/$(find gp_planner)/thirdparty/gtsam-4.1rc/install/lib"/>
 <node pkg="planning_core" name="planning" type="planning" output="screen">
   <param name="town" value="$(arg town)"/>
   <param name="simulator" value="$(arg simulator)"/>
