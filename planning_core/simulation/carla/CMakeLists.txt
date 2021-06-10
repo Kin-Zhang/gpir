@@ -35,6 +35,7 @@ target_link_libraries(carla_tf
 )
 
 add_executable(carla_controller carla_controller.cc)
+add_dependencies(carla_controller carla_msgs_gencpp)
 target_include_directories(carla_controller PRIVATE
   ${ackermann_msgs_INCLUDE_DIRS}
   ${carla_msgs_INCLUDE_DIRS}

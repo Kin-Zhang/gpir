@@ -210,7 +210,8 @@ bool StGraph::SearchWithLocalTruncation(const int k,
 
     auto t0 = std::chrono::high_resolution_clock::now();
     // LOG(INFO) << "iter: " << i
-    //           << ", expand num: " << search_tree_[i].size() * discrete_a.size();
+    //           << ", expand num: " << search_tree_[i].size() *
+    //           discrete_a.size();
     for (int j = 0; j < search_tree_[i].size(); ++j) {
       for (const auto& a : discrete_a) {
         auto next_node = search_tree_[i][j]->Forward(1.0, a);
@@ -342,12 +343,13 @@ void StGraph::GenerateTrajectory(const ReferenceLine& reference_line,
                                  common::Trajectory* trajectory) {
   trajectory->clear();
   const double t_final = st_nodes_.back().t;
-  // LOG(INFO) << "t_final: " << t_final;
-  common::State state;
+  const double maximum_s = gp_path.MaximumArcLength();
   Eigen::Vector3d d;
+  common::State state;
   for (double t = 0.0; t <= t_final; t += 0.1) {
     Eigen::Vector3d s(st_spline_(t), st_spline_.Derivative(t),
                       st_spline_.SecondOrderDerivative(t));
+    if (s[0] > maximum_s) break;
     gp_path.GetInterpolateNode(s[0], &d);
     common::FrenetTransfrom::FrenetStateToState(
         common::FrenetState(s, d), reference_line.GetFrenetReferncePoint(s[0]),

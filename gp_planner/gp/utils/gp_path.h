@@ -32,6 +32,8 @@ class GPPath {
                               s - start_s_ - index * delta_s_, node);
   }
 
+  inline double MaximumArcLength() const { return end_s_; }
+
  private:
   void GetEgoBox(const common::State& ego_state, common::Box2D* ego_box) const;
 

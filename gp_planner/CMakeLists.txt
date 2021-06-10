@@ -13,8 +13,7 @@ set(CMAKE_CXX_FLAGS_DEBUG "-g")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -march=native") # have to enable because of gtsam
 
-# set(GTSAM_DIR /home/udi/Downloads/gtsam-4.1rc/build/install/lib/cmake/GTSAM)
-set(GTSAM_DIR /home/udi/research/gtsam-4.1rc/backup/install/lib/cmake/GTSAM)
+set(GTSAM_DIR ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/gtsam-4.1rc/install/lib/cmake/GTSAM)
 find_package(GTSAM REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(Python2 COMPONENTS Development NumPy)
@@ -34,7 +33,6 @@ include_directories(SYSTEM
 )
 include_directories(
   ${CMAKE_SOURCE_DIR}/gpir
-  # "./thirdparty/matplotplusplus/source"
   "./thirdparty/traj_min_jerk"
 )
 

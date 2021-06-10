@@ -15,14 +15,14 @@ int main(int argc, char *argv[]) {
   occupancy_map.set_origin({0, -5});
   occupancy_map.set_cell_number(std::array<int, 2>{900, 100});
   occupancy_map.set_resolution({0.1, 0.1});
-  occupancy_map.FillCircle(Eigen::Vector2d(30, -1), 0.2);
+  occupancy_map.FillCircle(Eigen::Vector2d(40, -1), 0.2);
   // occupancy_map.FillCircle(Eigen::Vector2d(50, 2), 0.2);
-  occupancy_map.FillCircle(Eigen::Vector2d(70, 1), 0.2);
+  occupancy_map.FillCircle(Eigen::Vector2d(60, 1), 0.2);
   // occupancy_map.FillCircle(Eigen::Vector2d(70, 3), 0.2);
   auto sdf = std::make_shared<SignedDistanceField2D>(std::move(occupancy_map));
   sdf->UpdateSDF();
 
-  std::vector<double> hint{30, 70};
+  std::vector<double> hint{40, 60};
 
   TIC;
   GPPathOptimizer gp_path_optimizer(sdf);

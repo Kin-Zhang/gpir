@@ -141,7 +141,6 @@ bool GPPlanner::ProcessObstacles(const std::vector<Obstacle>& raw_obstacles,
     bool intersect_safe = intersect_lane.empty();
 
     if (outside_roi && intersect_safe) continue;
-    LOG(WARNING) << "critical obstacle " << obstacle.id();
     if (!obstacle.is_static()) {
       cirtical_obstacles->emplace_back(obstacle);
     }
