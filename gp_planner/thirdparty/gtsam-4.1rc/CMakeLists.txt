@@ -434,10 +434,10 @@ endif()
 add_subdirectory(gtsam)
 
 # Build Tests
-add_subdirectory(tests)
+# add_subdirectory(tests)
 
 # Build examples
-add_subdirectory(examples)
+# add_subdirectory(examples)
 
 # Build timing
 add_subdirectory(timing)
@@ -458,12 +458,12 @@ export(TARGETS ${GTSAM_EXPORTED_TARGETS} FILE GTSAM-exports.cmake)
 
 
 # Check for doxygen availability - optional dependency
-find_package(Doxygen)
+# find_package(Doxygen)
 
 # Doxygen documentation - enabling options in subfolder
-if (DOXYGEN_FOUND)
-    add_subdirectory(doc)
-endif()
+# if (DOXYGEN_FOUND)
+#     add_subdirectory(doc)
+# endif()
 
 # CMake Tools
 add_subdirectory(cmake)
