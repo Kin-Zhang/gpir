@@ -27,7 +27,7 @@ using hdmap::LaneSegmentBehavior;
 void NavigationMap::Init() {
   ros::NodeHandle node;
   reference_line_pub_ =
-      node.advertise<visualization_msgs::MarkerArray>("/reference_line1", 1);
+      node.advertise<visualization_msgs::MarkerArray>("/reference_line", 1);
   route_sequence_pub_ =
       node.advertise<visualization_msgs::MarkerArray>("/route_sequence", 1);
   virtual_obstacle_pub_ =

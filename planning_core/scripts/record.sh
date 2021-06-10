@@ -9,6 +9,13 @@ rosbag record /tf \
               /carla/ego_vehicle/vehicle_status \
               /carla/ego_vehicle/vehicle_info \
               /carla/objects \
+              /joint_states \
+              /move_base_simple/goal \
               /obstacle_bbox \
               /obstacle_info \
-              /move_base_simple/goal 
+              /prediction \
+              /critical_obstacles \
+              /virtual_obstacle \
+              /reference_line \
+              /gp_path \
+              /behavior_target_lane

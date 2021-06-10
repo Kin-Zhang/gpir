@@ -6,8 +6,6 @@ Panels:
       Expanded:
         - /Global Options1
         - /HDmap1/pcd1
-        - /Ego1
-        - /Ego1/target_behavior1
       Splitter Ratio: 0.6064140200614929
     Tree Height: 727
   - Class: rviz/Selection
@@ -71,7 +69,7 @@ Visualization Manager:
           Marker Topic: /hdmap
           Name: hdmap
           Namespaces:
-            "": true
+            {}
           Queue Size: 100
           Value: true
         - Alpha: 0.4000000059604645
@@ -141,7 +139,7 @@ Visualization Manager:
           Marker Topic: /obstacle_info
           Name: info
           Namespaces:
-            "": true
+            {}
           Queue Size: 100
           Value: true
         - Class: rviz/MarkerArray
@@ -174,10 +172,10 @@ Visualization Manager:
       Displays:
         - Class: rviz/MarkerArray
           Enabled: true
-          Marker Topic: /reference_line1
+          Marker Topic: /reference_line
           Name: reference_lines
           Namespaces:
-            "": true
+            {}
           Queue Size: 100
           Value: true
         - Class: rviz/MarkerArray
@@ -185,7 +183,7 @@ Visualization Manager:
           Marker Topic: /gp_path
           Name: GP_path
           Namespaces:
-            "": true
+            {}
           Queue Size: 100
           Value: true
         - Class: rviz/MarkerArray
@@ -193,7 +191,7 @@ Visualization Manager:
           Marker Topic: /behavior_target_lane
           Name: target_behavior
           Namespaces:
-            "": true
+            {}
           Queue Size: 100
           Value: true
       Enabled: true
@@ -223,7 +221,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/ThirdPersonFollower
-      Distance: 42.28374481201172
+      Distance: 22.31447982788086
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -238,10 +236,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.6393498182296753
+      Pitch: 0.4043499529361725
       Target Frame: ego_vehicle2d
       Value: ThirdPersonFollower (rviz)
-      Yaw: 2.9762659072875977
+      Yaw: 3.171266555786133
     Saved: ~
 Window Geometry:
   Displays:

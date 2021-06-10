@@ -1,5 +1,5 @@
 .vscode
 **/.vscode
-*/*.bag
+**/*.bag
 
 gp_planner/thirdparty/gtsam-4.1rc/install
