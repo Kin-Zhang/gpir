@@ -26,15 +26,10 @@ class AgentGenerator():
         blueprints = [x for x in blueprints if not x.id.endswith('cybertruck')]
         blueprints = [x for x in blueprints if not x.id.endswith('t2')]
         self.blueprints = blueprints
-
-        self.SpawnActor = carla.command.SpawnActor
-        self.SetAutopilot = carla.command.SetAutopilot
-        self.SetVehicleLightState = carla.command.SetVehicleLightState
-        self.FutureActor = carla.command.FutureActor
         self.agent_list = []
         self.minimum_distance = 8
-        self.spawn_offset = {"front": 8, "left": 0, "right": 0, "back": 8}
-
+        self.spawn_offset = {"front": 8, "front_left": 5,
+                             "back_left": -5, "front_right": 5, "back_right": -5, "back": -8}
         self.autopilot_enabled = False
 
         while True:
@@ -66,8 +61,7 @@ class AgentGenerator():
         return tf
 
     def spawn_agent(self, transform):
-        batch = []
-        batch.append(self.SpawnActor(self.random_blueprint(), transform))
+        batch = [carla.command.SpawnActor(self.random_blueprint(), transform)]
         for response in self.client.apply_batch_sync(batch, False):
             if response.error:
                 print("{}".format(response.error))
@@ -76,32 +70,40 @@ class AgentGenerator():
                 self.agent_list.append(response.actor_id)
         return True
 
+    def get_nearby_waypoint(self, waypoint, distance):
+        nearby_wp = waypoint.next(
+            distance) if distance >= 0 else waypoint.previous(abs(distance))
+        return nearby_wp[-1] if nearby_wp else None
+
     def spawn_agent_at(self, location="front"):
         ego_waypoint = self.map.get_waypoint(self.ego.get_transform().location)
         spawn_point = None
 
-        if location == "front":
-            spawn_point = ego_waypoint.next(self.spawn_offset[location])
-            if spawn_point:
-                spawn_point = spawn_point[-1]
-        elif location == "back":
-            spawn_point = ego_waypoint.previous(self.spawn_offset[location])
-            if spawn_point:
-                spawn_point = spawn_point[-1]
-        elif location == "left":
+        if location == "front" or location == "back":
+            spawn_point = self.get_nearby_waypoint(
+                ego_waypoint, self.spawn_offset[location])
+        elif location == "front_left" or location == "back_left":
             spawn_point = ego_waypoint.get_left_lane()
-            if spawn_point and self.spawn_offset[location] > 0:
-                spawn_point = spawn_point.next(self.spawn_offset[location])
-                if spawn_point:
-                    spawn_point = spawn_point[-1]
+            if spawn_point:
+                spawn_point = self.get_nearby_waypoint(
+                    spawn_point, self.spawn_offset[location])
+        elif location == "front_right" or location == "back_right":
+            spawn_point = ego_waypoint.get_right_lane()
+            if spawn_point:
+                spawn_point = self.get_nearby_waypoint(
+                    spawn_point, self.spawn_offset[location])
 
         if not spawn_point:
             print("can't find spawn location at ego's {}".format(location))
             return False
 
         if self.spawn_agent(self.get_transform(spawn_point)):
-            self.spawn_offset[location] += self.minimum_distance
-
+            print("succeed to spawn agent at {}".format(
+                self.get_transform(spawn_point)))
+            if self.spawn_offset[location] >= 0:
+                self.spawn_offset[location] += self.minimum_distance
+            else:
+                self.spawn_offset[location] -= self.minimum_distance
         return True
 
     def trigger_autopilot(self):
@@ -167,9 +169,21 @@ class KeyboardHandler():
                 elif event.key == pg.K_i:
                     print("Add agent in the front of ego")
                     self.agent_generator.spawn_agent_at("front")
+                elif event.key == pg.K_k:
+                    print("Add agent in the front of ego")
+                    self.agent_generator.spawn_agent_at("back")
+                elif event.key == pg.K_u:
+                    print("Add agent in the front of ego")
+                    self.agent_generator.spawn_agent_at("front_left")
                 elif event.key == pg.K_j:
+                    print("Add agent in the front of ego")
+                    self.agent_generator.spawn_agent_at("back_left")
+                elif event.key == pg.K_o:
+                    print("Add agent in the front of ego")
+                    self.agent_generator.spawn_agent_at("front_right")
+                elif event.key == pg.K_l:
                     print("Add agent in the left of ego")
-                    self.agent_generator.spawn_agent_at("left")
+                    self.agent_generator.spawn_agent_at("back_right")
                 elif event.key == pg.K_b:
                     print("Trigger agents' autopilot")
                     self.agent_generator.trigger_autopilot()
@@ -204,9 +218,6 @@ def main():
         default='vehicle.*',
         help='vehicles filter (default: "vehicle.*")')
     args = argparser.parse_args()
-
-    client = carla.Client(args.host, args.port)
-    client.set_timeout(10.0)
 
     rospy.init_node("key2joy")
     rate = rospy.Rate(10)

@@ -232,12 +232,13 @@ bool NavigationMap::UpdateReferenceLine() {
       reference_lines_.back().length());
   // const double forward_length = std::min(50.0, reference_line_.length());
   const double step_length = 0.15;
-  refernce_speed_ = 15.0 + adjust_speed_;
+  refernce_speed_ = 15.0;
   for (double s = 0; s <= forward_length; s += step_length) {
     reference_lines_.back().GetCurvature(s, &kappa, &dkappa);
     refernce_speed_ =
         std::min(refernce_speed_, std::sqrt(lat_acc_limit / std::fabs(kappa)));
   }
+  refernce_speed_ = std::max(0.0, refernce_speed_ + adjust_speed_);
   LOG(INFO) << "refernce speed: " << refernce_speed_;
 
   PublishRouteSequence();
