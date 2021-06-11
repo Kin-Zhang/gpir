@@ -3,6 +3,8 @@
 #include <Eigen/Core>
 #include <vector>
 
+#include "common/base/type.h"
+
 #pragma once
 
 namespace planning {
@@ -23,6 +25,12 @@ class GPInitializer {
               std::vector<double> s_refs, const double s, const double lb,
               const double ub, std::vector<Eigen::Vector3d>* res,
               std::vector<double>* l);
+
+  bool GenerateInitialPath(const Eigen::Vector3d& x0, const Eigen::Vector3d& xn,
+                           const std::vector<double> s_refs,
+                           const std::vector<double>& obstacle_location_hint,
+                           const std::vector<double>& lb,
+                           std::vector<double>& ub, vector_Eigen3d* result);
 
  private:
   std::vector<std::pair<double, double>> boundary_;

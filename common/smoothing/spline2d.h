@@ -34,6 +34,7 @@ class Spline2d {
   uint32_t spline_order() const;
 
   void GetCurvature(const double t, double* kappa, double* dkappa) const;
+  double GetCurvature(const double t) const;
 
  private:
   uint32_t find_index(const double x) const;

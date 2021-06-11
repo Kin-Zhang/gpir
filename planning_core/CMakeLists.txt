@@ -23,7 +23,7 @@ find_package(catkin REQUIRED COMPONENTS
   hdmap
   gp_planner
 )
-# set(EIGEN3_INCLUDE_DIR ./thirdparty/Eigen)
+
 include_directories(SYSTEM ${EIGEN3_INCLUDE_DIR})
 include_directories(${CMAKE_SOURCE_DIR}/gpir)
 

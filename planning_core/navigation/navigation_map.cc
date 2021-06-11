@@ -27,7 +27,7 @@ using hdmap::LaneSegmentBehavior;
 void NavigationMap::Init() {
   ros::NodeHandle node;
   reference_line_pub_ =
-      node.advertise<visualization_msgs::MarkerArray>("/reference_line1", 1);
+      node.advertise<visualization_msgs::MarkerArray>("/reference_line", 1);
   route_sequence_pub_ =
       node.advertise<visualization_msgs::MarkerArray>("/route_sequence", 1);
   virtual_obstacle_pub_ =
@@ -232,12 +232,13 @@ bool NavigationMap::UpdateReferenceLine() {
       reference_lines_.back().length());
   // const double forward_length = std::min(50.0, reference_line_.length());
   const double step_length = 0.15;
-  refernce_speed_ = 15.0 + adjust_speed_;
+  refernce_speed_ = 15.0;
   for (double s = 0; s <= forward_length; s += step_length) {
     reference_lines_.back().GetCurvature(s, &kappa, &dkappa);
     refernce_speed_ =
         std::min(refernce_speed_, std::sqrt(lat_acc_limit / std::fabs(kappa)));
   }
+  refernce_speed_ = std::max(0.0, refernce_speed_ + adjust_speed_);
   LOG(INFO) << "refernce speed: " << refernce_speed_;
 
   PublishRouteSequence();
@@ -264,9 +265,12 @@ void NavigationMap::UpdateVirtualObstacles() {
 
   if (add_virtual_obstacles_) {
     const auto& target_lane = reference_lines_.front();
-    auto ego_proj = target_lane.GetProjection(data_frame_->state.position);
-    double obs_s = RandomDouble(ego_proj.s + 50, ego_proj.s + 70);
-    double obs_d = RandomDouble(1.0, 1.5);
+    common::FrenetPoint proj =
+        virtual_obstacles_.empty()
+            ? target_lane.GetProjection(data_frame_->state.position)
+            : target_lane.GetProjection(virtual_obstacles_.back());
+    double obs_s = RandomDouble(proj.s + 40, proj.s + 60);
+    double obs_d = (RandomDouble(-1, 1) >= 0 ? 1 : -1) * RandomDouble(1.0, 1.5);
     Eigen::Vector2d obs_pos;
     target_lane.FrenetToCartesion(obs_s, obs_d, &obs_pos);
     virtual_obstacles_.emplace_back(obs_pos);

@@ -68,10 +68,11 @@ int main(int argc, char const* argv[]) {
   common::FrenetState frenet_state;
   reference_line.ToFrenetState(initial_state, &frenet_state);
 
+  LOG(INFO) << "1";
   GPPath gp_path;
   common::Trajectory trajectory;
-  if (!gp_path_optimizer.GenerateGPPath(reference_line, frenet_state, 90, -1,
-                                        &trajectory, &gp_path)) {
+  if (!gp_path_optimizer.GenerateGPPath(reference_line, frenet_state, 90,
+                                        std::vector<double>{10}, &gp_path)) {
     LOG(ERROR) << "gp planner failed";
     return -1;
   }

@@ -137,6 +137,10 @@ void ReferenceLine::GetCurvature(const double s, double* kappa,
   spline_.GetCurvature(s, kappa, dkappa);
 }
 
+double ReferenceLine::GetCurvature(const double s) const {
+  return spline_.GetCurvature(s);
+}
+
 void ReferenceLine::FrenetToCartesion(const double s, const double d,
                                       Eigen::Vector2d* point) const {
   const double theta = spline_.theta(s);

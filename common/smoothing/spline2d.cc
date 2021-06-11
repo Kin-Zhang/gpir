@@ -44,6 +44,17 @@ void Spline2d::GetCurvature(const double t, double* kappa,
   *dkappa = CurvatureDerivative(dx, ddx, dddx, dy, ddy, dddy);
 }
 
+double Spline2d::GetCurvature(const double t) const {
+  if (splines_.empty()) return 0.0;
+  uint32_t index = find_index(t);
+  const double param = t - t_knots_[index];
+  const double dx = splines_[index].DerivativeX(param);
+  const double ddx = splines_[index].SecondDerivativeX(param);
+  const double dy = splines_[index].DerivativeY(param);
+  const double ddy = splines_[index].SecondDerivativeX(param);
+  return Curvature(dx, ddx, dy, ddy);
+}
+
 std::pair<double, double> Spline2d::operator()(const double t) const {
   if (splines_.empty()) {
     return std::make_pair(0.0, 0.0);

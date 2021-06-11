@@ -85,12 +85,12 @@ void PlanningVisual::ObstacleInfoToMarkerArray(
     marker_info.type = visualization_msgs::Marker::TEXT_VIEW_FACING;
     marker_info.action = visualization_msgs::Marker::MODIFY;
     marker_info.color = ColorMap::at(Color::kBlack).toRosMsg();
-    marker_info.scale.z = 1;
+    marker_info.scale.z = 0.5;
     marker_info.text = "ID: " + std::to_string(id) + "\n" +
                        common::to_string_with_precision(state.velocity, 2) +
                        " m/s";
     CommonVisual::PositionToPose(state.position, &marker_info.pose,
-                                 obstacle.height() * 2.5);
+                                 obstacle.height() * 1.5);
 
     markers->markers.emplace_back(marker_info);
   }

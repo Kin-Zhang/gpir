@@ -75,9 +75,8 @@ void GPPlanner::PlanOnce(NavigationMap* navigation_map_) {
     // GP path planning
     GPPath gp_path;
     GPPathOptimizer gp_path_optimizer(sdf);
-    if (!gp_path_optimizer.GenerateGPPath(reference_line, frenet_state, 90, -1,
-                                          navigation_map_->mutable_trajectory(),
-                                          &gp_path)) {
+    if (!gp_path_optimizer.GenerateGPPath(reference_line, frenet_state, 90,
+                                          obstacle_location_hint, &gp_path)) {
       LOG(ERROR) << "GP path planning failed";
       return;
     }
@@ -142,7 +141,6 @@ bool GPPlanner::ProcessObstacles(const std::vector<Obstacle>& raw_obstacles,
     bool intersect_safe = intersect_lane.empty();
 
     if (outside_roi && intersect_safe) continue;
-    LOG(WARNING) << "critical obstacle " << obstacle.id();
     if (!obstacle.is_static()) {
       cirtical_obstacles->emplace_back(obstacle);
     }
@@ -178,6 +176,7 @@ void GPPlanner::VisualizeTrajectory(
     line.id = id_count++;
     line.type = visualization_msgs::Marker::LINE_STRIP;
     line.action = visualization_msgs::Marker::MODIFY;
+    line.pose.orientation.w = 1.0;
     line.lifetime = ros::Duration(0.15);
 
     PlanningVisual::FillHeader(&node.header);
@@ -185,16 +184,17 @@ void GPPlanner::VisualizeTrajectory(
     node.type = visualization_msgs::Marker::CYLINDER;
     node.action = visualization_msgs::Marker::MODIFY;
     node.pose.orientation.w = 1;
+    node.pose.orientation.w = 1.0;
     node.lifetime = ros::Duration(0.15);
 
     if (i == 0) {
       PlanningVisual::FillHeader(&shape.header);
       PlanningVisual::SetScaleAndColor({2.1, 0, 0}, common::kGold, &shape, 0.2);
+      shape.id = id_count++;
       shape.type = visualization_msgs::Marker::LINE_STRIP;
       shape.action = visualization_msgs::Marker::MODIFY;
       shape.pose.orientation.w = 1;
       shape.lifetime = ros::Duration(0.15);
-      shape.id = id_count++;
     }
 
     geometry_msgs::Point point;

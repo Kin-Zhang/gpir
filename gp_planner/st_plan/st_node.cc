@@ -25,10 +25,11 @@ std::unique_ptr<StNode> StNode::Forward(const double delta_t,
 }
 
 void StNode::CalObstacleCost(const double d) {
-  if (d <= 0) {
+  constexpr double kMinSafeDistance = 1.0;
+  if (d <= kMinSafeDistance) {
     cost += 1e9;
-  } else if (d <= v * v / 6 || d <= 10.0) {
-    cost += weights_.obstacle * std::max(v * v / 6 - d, 10.0 - d);
+  } else if (d <= v * v / 8) {
+    cost += weights_.obstacle * (v * v / 8 - d);
   }
 }
 }  // namespace planning
