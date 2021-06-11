@@ -3,6 +3,7 @@
 #pragma once
 
 #include <cmath>
+#include <iostream>
 
 namespace planning {
 
@@ -28,6 +29,7 @@ class BoundedPenaltyFunction {
     } else if (limit1_ <= val && val < limit2_) {
       double error = val - limit1_;
       *grad = 3 * error * error;
+      // std::cout << "error: " << error << std::endl;
       return error * error * error;
     } else if (limit2_ <= val) {
       *grad = 2 * a2_ * val + b2_;
@@ -42,7 +44,7 @@ class BoundedPenaltyFunction {
     }
   }
 
- private:
+//  private:
   double limit1_ = 0.0;
   double limit2_ = 0.0;
   double eps_ = 0.0;

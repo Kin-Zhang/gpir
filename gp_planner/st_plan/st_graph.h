@@ -36,6 +36,13 @@ class StGraph {
 
   bool SearchWithLocalTruncation(const int k, std::vector<StNode>* result);
 
+  bool GenerateInitialSpeedProfile(const GPPath& gp_path);
+
+  bool CheckTrajectory(const GPPath& gp_path, std::vector<double>* locations,
+                       std::vector<double>* kappa_limit);
+
+  bool UpdateSpeedProfile(const GPPath& gp_path);
+
   bool OptimizeTest();
 
   void GenerateTrajectory(const ReferenceLine& reference_line,
@@ -60,12 +67,16 @@ class StGraph {
   double safety_margin_ = 0.0;
   double a_max_ = 2.0;
   double a_min_ = -4.0;
+  const double lat_a_max_ = 4.0;
 
   std::unique_ptr<SignedDistanceField2D> sdf_;
   std::vector<std::vector<std::vector<StPoint>>> st_block_segments_;
   std::vector<std::vector<std::unique_ptr<StNode>>> search_tree_;
 
   std::vector<StNode> st_nodes_;
+
+  const double step_length_ = 0.5;
+  std::vector<double> t_knots_;
   common::Spline1d st_spline_;
 };
 

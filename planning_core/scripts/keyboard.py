@@ -17,6 +17,7 @@ class AgentGenerator():
         self.map = self.world.get_map()
         self.tm = self.client.get_trafficmanager(args.tm_port)
         self.tm.set_global_distance_to_leading_vehicle(1.0)
+        self.tm.set_hybrid_physics_mode(args.hybrid)
 
         blueprints = self.world.get_blueprint_library().filter(args.filterv)
         blueprints = [x for x in blueprints if int(
@@ -217,6 +218,11 @@ def main():
         metavar='PATTERN',
         default='vehicle.*',
         help='vehicles filter (default: "vehicle.*")')
+    argparser.add_argument(
+        '--hybrid',
+        default=False,
+        action='store_true',
+        help='Enanble hybrid physics model')
     args = argparser.parse_args()
 
     rospy.init_node("key2joy")

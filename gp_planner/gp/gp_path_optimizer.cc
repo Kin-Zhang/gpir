@@ -68,7 +68,8 @@ bool GPPathOptimizer::GenerateGPPath(
 
       graph_.add(GPPriorFactor(last_key, key, delta_s, kQc));
 
-      if (current_s > 20) {
+      // LOG(INFO) << "init v: " << initial_state.s[1];
+      if (current_s > initial_state.s[1] * 3) {
         graph_.add(PriorFactor3(key, x_ref, pose_fix_cost3));
       }
       graph_.add(

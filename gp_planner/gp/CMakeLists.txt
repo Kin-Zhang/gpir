@@ -11,6 +11,7 @@ target_sources(gp_planner_gp
     utils/gp_utils.cc
     utils/gp_path.cc
     gp_path_optimizer.cc
+    gp_incremental_path_planner.cc
 )
 
 target_link_libraries(gp_planner_gp PUBLIC

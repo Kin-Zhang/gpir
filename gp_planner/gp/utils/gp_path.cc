@@ -2,6 +2,7 @@
 
 #include "gp_planner/gp/utils/gp_path.h"
 
+#include "gtsam/nonlinear/Symbol.h"
 #include "planning_core/planning_common/vehicle_info.h"
 
 namespace planning {
@@ -22,6 +23,35 @@ void GPPath::GetState(const double s, common::State* state) const {
   GetInterpolateNode(s, &d);
   reference_line_->FrenetToState(s, d, state);
   state->debug = d;
+}
+
+double GPPath::GetCurvature(const double s) const {
+  double kappa_r, dkappa_r;
+  reference_line_->GetCurvature(s, &kappa_r, &dkappa_r);
+  Eigen::Vector3d node;
+  GetInterpolateNode(s, &node);
+  const double one_minus_kappa_rd = 1 - kappa_r * node(0);
+  const double one_minus_kappa_rd_inv = 1.0 / one_minus_kappa_rd;
+  const double theta = std::atan2(node(1), one_minus_kappa_rd);
+
+  const double tan_theta = node(1) / one_minus_kappa_rd;
+  const double sin_theta = std::sin(theta);
+  const double cos_theta = std::cos(theta);
+  const double cos_theta_sqr = cos_theta * cos_theta;
+
+  const double kappa =
+      ((node(2) - (dkappa_r * node(0) + kappa_r * node(1)) * tan_theta) *
+           cos_theta_sqr * one_minus_kappa_rd_inv +
+       kappa_r) *
+      cos_theta * one_minus_kappa_rd_inv;
+  return kappa;
+}
+
+void GPPath::GetInterpolateNode(const double s, Eigen::Vector3d* node) const {
+  int index = std::max(
+      std::min(static_cast<int>((s - start_s_) / delta_s_), num_nodes_ - 2), 0);
+  interpolator_.Interpolate(nodes_[index], nodes_[index + 1],
+                            s - start_s_ - index * delta_s_, node);
 }
 
 bool GPPath::HasOverlapWith(const common::State& state, const double length,
@@ -73,5 +103,11 @@ void GPPath::GetEgoBox(const common::State& ego_state,
                                            std::sin(ego_state.heading)) *
                                ego_param.rear_axle_to_center,
       ego_param.length, ego_param.width, ego_state.heading);
+}
+
+void GPPath::UpdateNodes(const gtsam::Values& values) {
+  for (int i = 0; i < nodes_.size(); ++i) {
+    nodes_[i] = values.at<gtsam::Vector3>(gtsam::Symbol('x', i));
+  }
 }
 }  // namespace planning
