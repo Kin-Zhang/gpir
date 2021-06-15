@@ -3,6 +3,7 @@
 #include <memory>
 
 #include "gp_planner/gp/utils/bounded_penalty_function.h"
+#include "gp_planner/gp/utils/penalty_function.h"
 #include "gtsam/nonlinear/NonlinearFactor.h"
 
 namespace planning {
@@ -17,7 +18,7 @@ class GPKappaLimitFactor : public gtsam::NoiseModelFactor1<gtsam::Vector3> {
         dkappa_r_(dkappa_r),
         kappa_limit_(kappa_limit),
         s_(s),
-        penalty_(kappa_limit, 0.3 * kappa_limit) {}
+        penalty_(kappa_limit) {}
   ~GPKappaLimitFactor() = default;
 
   gtsam::Vector evaluateError(
@@ -30,6 +31,7 @@ class GPKappaLimitFactor : public gtsam::NoiseModelFactor1<gtsam::Vector3> {
   double kappa_limit_ = 0.0;
   double s_ = 0.0;
 
-  BoundedPenaltyFunction penalty_;
+  // BoundedPenaltyFunction penalty_;
+  PenaltyFunction penalty_;
 };
 }  // namespace planning

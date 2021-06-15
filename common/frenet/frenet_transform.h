@@ -13,6 +13,9 @@ class FrenetTransfrom {
                                  const FrenetReferencePoint& ref,
                                  FrenetState* frenet_state);
 
+  // static void SpeedProfileToFrenet(const Eigen::Vector3d& s, const
+  // FrenetReferencePoint& ref, Eigen::Vector3d)
+
   static void FrenetStateToState(const FrenetState& frenet_state,
                                  const FrenetReferencePoint& ref, State* state);
 

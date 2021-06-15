@@ -2,6 +2,7 @@
 
 #include <memory>
 
+#include "gp_planner/gp/utils/penalty_function.h"
 #include "gp_planner/gp/interpolator/gp_interpolator.h"
 #include "gp_planner/gp/utils/bounded_penalty_function.h"
 #include "gtsam/nonlinear/NonlinearFactor.h"
@@ -22,7 +23,7 @@ class GPInterpolateKappaLimitFactor
         dkappa_r_(dkappa_r),
         kappa_limit_(kappa_limit),
         gp_interpolator_(qc, interval, tau),
-        penalty_(kappa_limit, 0.3 * kappa_limit) {}
+        penalty_(kappa_limit) {}
   ~GPInterpolateKappaLimitFactor() = default;
 
   gtsam::Vector evaluateError(
@@ -35,7 +36,8 @@ class GPInterpolateKappaLimitFactor
   double dkappa_r_ = 0.0;
   double kappa_limit_ = 0.0;
 
-  BoundedPenaltyFunction penalty_;
+  // BoundedPenaltyFunction penalty_;
+  PenaltyFunction penalty_;
   GPInterpolator gp_interpolator_;
 };
 }  // namespace planning

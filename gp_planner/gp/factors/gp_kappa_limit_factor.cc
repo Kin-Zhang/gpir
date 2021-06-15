@@ -22,7 +22,7 @@ gtsam::Vector GPKappaLimitFactor::evaluateError(
   } else {
     kappa = CurvatureUtils::GetKappaAndJacobian(x, kappa_r_, dkappa_r_);
   }
-  double error = penalty_.GetPenaltyAndGradient(kappa, &gradient);
+  double error = penalty_.EvaluateHinge(kappa, &gradient);
   if (H) (*H) *= gradient;
   return gtsam::Vector1(error);
 }

@@ -37,17 +37,17 @@ gtsam::Vector GPInterpolateKappaLimitFactor::evaluateError(
     x = gp_interpolator_.Interpolate(x1, x2, J_x1, J_x2);
     double kappa =
         CurvatureUtils::GetKappaAndJacobian(x, kappa_r_, dkappa_r_, J_err);
-    error = penalty_.GetPenaltyAndGradient(kappa, &gradient);
+    error = penalty_.EvaluateHinge(kappa, &gradient);
     J_err *= gradient;
     (*H1) = J_err * J_x1;
     (*H2) = J_err * J_x2;
     // std::cout <<  "kappa: " << kappa << ", penalty: " << error << std::endl;
-    // printf("penalty: %f, (%f, %f, %f)\n", error, (*H1)(0, 0), (*H1)(0, 1),
-    //        (*H1)(0, 2));
+    // printf("kappa: %f, penalty: %f, (%f, %f, %f)\n", kappa, error, (*H1)(0, 0),
+    //        (*H1)(0, 1), (*H1)(0, 2));
   } else {
     x = gp_interpolator_.Interpolate(x1, x2);
     double kappa = CurvatureUtils::GetKappaAndJacobian(x, kappa_r_, dkappa_r_);
-    error = penalty_.GetPenaltyAndGradient(kappa, &gradient);
+    error = penalty_.EvaluateHinge(kappa, &gradient);
   }
 
   return gtsam::Vector1(error);

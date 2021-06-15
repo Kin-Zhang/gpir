@@ -16,6 +16,12 @@ class GPPlanner : public Planner {
   void Init() override;
   void PlanOnce(NavigationMap* navigation_map_) override;
 
+ protected:
+  bool PlanWithGPIR(const ReferenceLine& reference_line,
+                    const std::vector<Obstacle>& dynamic_agents,
+                    const std::vector<Eigen::Vector2d>& virtual_obstacles,
+                    common::Trajectory* trajectory);
+
  private:
   bool ProcessObstacles(const std::vector<Obstacle>& raw_obstacles,
                         const ReferenceLine& reference_line,
@@ -39,6 +45,7 @@ class GPPlanner : public Planner {
   common::Box2D ego_box_;
   VehicleParam vehicle_param_;
 
+  int max_iter = 5;
   const double lateral_critical_thereshold_ = 6;
 
   std::vector<Obstacle> static_obstacles_;

@@ -24,6 +24,7 @@ double GPUtils::HingeLoss2(const gtsam::Vector2& point,
                            gtsam::OptionalJacobian<1, 2> H_point) {
   gtsam::Vector2 grad;
   const double signed_distance = sdf.SignedDistance(point, &grad);
+  // printf("point: (%f, %f), sdf: %f\n", point.x(), point.y(), signed_distance);
   double error = eps - signed_distance;
 
   if (error < 0) {

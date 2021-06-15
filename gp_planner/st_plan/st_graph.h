@@ -38,8 +38,7 @@ class StGraph {
 
   bool GenerateInitialSpeedProfile(const GPPath& gp_path);
 
-  bool CheckTrajectory(const GPPath& gp_path, std::vector<double>* locations,
-                       std::vector<double>* kappa_limit);
+  bool CheckTrajectory(const GPPath& gp_path, vector_Eigen3d* frenet_s);
 
   bool UpdateSpeedProfile(const GPPath& gp_path);
 
@@ -55,10 +54,12 @@ class StGraph {
 
   const OccupancyMap& grid_map() const { return sdf_->occupancy_map(); }
 
- private:
+ private: 
   void GetObstacleBlockSegment(
       const Obstacle& obstacle, const GPPath& gp_path,
       std::vector<std::vector<StPoint>>* st_block_segment);
+
+  void GetFrenetState(const double t, Eigen::Vector3d* s);
 
  private:
   Eigen::Vector3d init_s_;
@@ -75,7 +76,7 @@ class StGraph {
 
   std::vector<StNode> st_nodes_;
 
-  const double step_length_ = 0.5;
+  const double step_length_ = 0.1;
   std::vector<double> t_knots_;
   common::Spline1d st_spline_;
 };

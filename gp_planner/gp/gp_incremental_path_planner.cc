@@ -5,9 +5,11 @@
 #include <queue>
 
 #include "common/utils/math.h"
+#include "common/utils/timer.h"
 #include "gp_planner/gp/factors/gp_interpolate_kappa_limit_factor.h"
 #include "gp_planner/gp/factors/gp_interpolate_obstacle_factor.h"
 #include "gp_planner/gp/factors/gp_kappa_limit_factor.h"
+#include "gp_planner/gp/factors/gp_lat_acc_limit_factor.h"
 #include "gp_planner/gp/factors/gp_obstacle_factor.h"
 #include "gp_planner/gp/factors/gp_prior_factor.h"
 #include "gp_planner/initializer/gp_initializer.h"
@@ -128,7 +130,9 @@ bool GPIncrementalPathPlanner::GenerateInitialGPPath(
     const ReferenceLine& reference_line,
     const common::FrenetState& initial_state, const double length,
     const std::vector<double>& obstacle_location_hint, GPPath* gp_path) {
+  TIC;
   static auto sigma_initial = Isotropic::Sigma(3, 0.001);
+  // static auto sigma_goal = Isotropic::Sigma(3, 0.001);
   static auto sigma_goal = Diagonal::Sigmas(Vector3(1, 0.1, 0.1));
   static auto sigma_reference = Diagonal::Sigmas(Vector3(30, 1e9, 1e9));
 
@@ -160,12 +164,12 @@ bool GPIncrementalPathPlanner::GenerateInitialGPPath(
 
       graph_.add(GPPriorFactor(last_key, key, interval_, kQc));
 
-      // if (current_s > 20) {
-      //   graph_.add(PriorFactor3(key, x_ref, sigma_reference));
-      // }
+      if (current_s > 0) {
+        graph_.add(PriorFactor3(key, x_ref, sigma_reference));
+      }
       graph_.add(
           GPObstacleFactor(key, sdf_, 0.01, kEpsilon, current_s, kappa_r));
-      graph_.add(GPKappaLimitFactor(key, 0.001, kappa_r, dkappa_r, kappa_limit_,
+      graph_.add(GPKappaLimitFactor(key, 0.01, kappa_r, dkappa_r, kappa_limit_,
                                     current_s));
 
       for (int j = 0; j < collision_check_num; ++j) {
@@ -173,8 +177,10 @@ bool GPIncrementalPathPlanner::GenerateInitialGPPath(
             last_key, key, sdf_, 0.01, kEpsilon, start_s + interval_ * (i - 1),
             kQc, interval_, tau * (j + 1), kappa_r));
         graph_.add(GPInterpolateKappaLimitFactor(
-            last_key, key, 0.001, kQc, interval_, tau * (j + 1), kappa_r,
+            last_key, key, 0.01, kQc, interval_, tau * (j + 1), kappa_r,
             dkappa_r, kappa_limit_));
+        // graph_.add(GPLatAccLimitFactor(last_key, key, kQc, interval_,
+        //                                tau * (j + 1), 15, 0, 4.0, 0.1));
       }
     }
   }
@@ -210,6 +216,7 @@ bool GPIncrementalPathPlanner::GenerateInitialGPPath(
   param.setlambdaInitial(100.0);
   param.setAbsoluteErrorTol(1e-5);
   param.setVerbosity("ERROR");
+  // param.se
 
   gtsam::LevenbergMarquardtOptimizer opt(graph_, init_values, param);
   map_result_ = opt.optimize();
@@ -221,7 +228,7 @@ bool GPIncrementalPathPlanner::GenerateInitialGPPath(
     gp_path_nodes->emplace_back(
         map_result_.at<gtsam::Vector3>(gtsam::Symbol('x', i)));
   }
-
+  TOC("GP path Generation");
   // init isam2
   isam2_ = gtsam::ISAM2(
       gtsam::ISAM2Params(gtsam::ISAM2GaussNewtonParams(), 1e-3, 1));
@@ -231,24 +238,24 @@ bool GPIncrementalPathPlanner::GenerateInitialGPPath(
   return true;
 }
 
-bool GPIncrementalPathPlanner::UpdateGPPath(
-    const ReferenceLine& reference_line, const std::vector<double>& locations,
-    const std::vector<double>& kappa_limit, GPPath* gp_path) {
-  CHECK_EQ(locations.size(), kappa_limit.size());
-
-  double kappa_r, dkappa_r;
-  for (int i = 0; i < locations.size(); ++i) {
-    int index = FindLocationIndex(locations[i]);
-    reference_line.GetCurvature(locations[i], &kappa_r, &dkappa_r);
+bool GPIncrementalPathPlanner::UpdateGPPath(const ReferenceLine& reference_line,
+                                            const vector_Eigen3d& frenet_s,
+                                            GPPath* gp_path) {
+  TIC;
+  for (int i = 0; i < frenet_s.size(); ++i) {
+    int index =
+        std::floor((frenet_s[i](0) - node_locations_.front()) / interval_);
+    printf("%d: s: %f, index: %d\n", i, frenet_s[i](0), index);
     gtsam::Symbol begin_node('x', index), end_node('x', index + 1);
-    graph_.add(
-        GPInterpolateKappaLimitFactor(begin_node, end_node, 0.1, kQc, interval_,
-                                      locations[i] - node_locations_[index],
-                                      kappa_r, dkappa_r, kappa_limit[i]));
+    graph_.add(GPLatAccLimitFactor(begin_node, end_node, kQc, interval_,
+                                   frenet_s[i](0) - node_locations_[index],
+                                   frenet_s[i](1), frenet_s[i](2), 4.0, 0.1));
   }
   isam2_.update(graph_);
   map_result_ = isam2_.calculateEstimate();
   gp_path->UpdateNodes(map_result_);
+  TOC("Update GP path");
+  return true;
 }
 
 int GPIncrementalPathPlanner::FindLocationIndex(const double s) {

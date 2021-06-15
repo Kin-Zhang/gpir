@@ -24,8 +24,7 @@ class GPIncrementalPathPlanner {
                              GPPath* gp_path);
 
   bool UpdateGPPath(const ReferenceLine& reference_line,
-                    const std::vector<double>& locations,
-                    const std::vector<double>& kappa_limit, GPPath* gp_path);
+                    const vector_Eigen3d& frenet_s, GPPath* gp_path);
 
   void set_sdf(std::shared_ptr<SignedDistanceField2D> sdf) { sdf_ = sdf; }
 
@@ -46,7 +45,7 @@ class GPIncrementalPathPlanner {
   int num_of_nodes_ = 21;
   double ego_width_ = 2.1;
   double ego_half_width_ = 1.0;
-  const double kappa_limit_ = 0.02;
+  const double kappa_limit_ = 0.35;
   double interval_ = 0.0;
   std::vector<double> node_locations_;
   std::shared_ptr<SignedDistanceField2D> sdf_;

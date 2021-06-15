@@ -23,28 +23,32 @@ class BoundedPenaltyFunction {
   }
 
   double GetPenaltyAndGradient(const double val, double* grad) const {
+    double cost = 0.0;
     if (std::fabs(val) < limit1_) {
       *grad = 0.0;
-      return 0.0;
+      cost = 0.0;
     } else if (limit1_ <= val && val < limit2_) {
       double error = val - limit1_;
       *grad = 3 * error * error;
       // std::cout << "error: " << error << std::endl;
-      return error * error * error;
+      cost = error * error * error;
     } else if (limit2_ <= val) {
       *grad = 2 * a2_ * val + b2_;
-      return a2_ * val * val + b2_ * val + c2_;
+      cost = a2_ * val * val + b2_ * val + c2_;
     } else if (-limit2_ < val && val <= -limit1_) {
       double error = -limit1_ - val;
       *grad = -3 * error * error;
-      return error * error * error;
+      cost = error * error * error;
     } else {
       *grad = 2 * a1_ * val + b1_;
-      return a1_ * val * val + b1_ * val + c1_;
+      cost = a1_ * val * val + b1_ * val + c1_;
     }
+    (*grad) *=1000;
+    cost *= 1000;
+    return cost;
   }
 
-//  private:
+  //  private:
   double limit1_ = 0.0;
   double limit2_ = 0.0;
   double eps_ = 0.0;

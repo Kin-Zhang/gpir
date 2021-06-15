@@ -8,6 +8,7 @@
 #include <fstream>
 #include <random>
 
+#include "common/frenet/frenet_state.h"
 #include "common/frenet/frenet_transform.h"
 #include "common/smoothing/osqp_spline1d_solver.h"
 #include "common/utils/timer.h"
@@ -257,8 +258,8 @@ bool StGraph::GenerateInitialSpeedProfile(const GPPath& gp_path) {
     double max_abs_v =
         1.5 * std::sqrt(lat_a_max_ / std::fabs(gp_path.GetCurvature(s)));
     t_samples.emplace_back(t);
-    printf("t: %f, delta: %f, s: %f, kappa: %f, max_v: %f\n", t, delta, s,
-           gp_path.GetCurvature(s), max_abs_v);
+    // printf("t: %f, delta: %f, s: %f, kappa: %f, max_v: %f\n", t, delta, s,
+    //        gp_path.GetCurvature(s), max_abs_v);
     v_min.emplace_back(-max_abs_v);
     v_max.emplace_back(max_abs_v);
     a_min.emplace_back(a_min_);
@@ -292,23 +293,27 @@ bool StGraph::GenerateInitialSpeedProfile(const GPPath& gp_path) {
   return true;
 }
 
-bool StGraph::CheckTrajectory(const GPPath& gp_path,
-                              std::vector<double>* locations,
-                              std::vector<double>* kappa_limit) {
+void StGraph::GetFrenetState(const double t, Eigen::Vector3d* s) {
+  s->x() = st_spline_(t);
+  s->y() = st_spline_.Derivative(t);
+  s->z() = st_spline_.SecondOrderDerivative(t);
+}
+
+bool StGraph::CheckTrajectory(const GPPath& gp_path, vector_Eigen3d* frenet_s) {
   LOG(INFO) << "check trajectory";
+  double lat_acc = 0.0;
+  Eigen::Vector3d s, d;
   for (double t = t_knots_.front() + step_length_; t < t_knots_.back();
        t += step_length_) {
-    double s = st_spline_(t);
-    double v = st_spline_.Derivative(t);
-    double lat_a = v * v * gp_path.GetCurvature(s);
-    if (lat_a > lat_a_max_) {
-      locations->emplace_back(s);
-      kappa_limit->emplace_back(lat_a_max_ / (v * v));
-      printf("*** invalid lateral acc at %f, %f vs %f, limit: %f\n", s, lat_a,
-             lat_a_max_, lat_a_max_ / (v * v));
+    GetFrenetState(t, &s);
+    gp_path.GetInterpolateNode(s(0), &d);
+    lat_acc = d(2) * s(1) * s(1) + d(1) * s(2);
+    if (std::fabs(lat_acc) > lat_a_max_) {
+      printf("invalid at %f, acc: %f\n", t, lat_acc);
+      frenet_s->emplace_back(s);
     }
   }
-  return locations->empty() ? true : false;
+  return frenet_s->empty() ? true : false;
 }
 
 bool StGraph::OptimizeTest() {
@@ -368,13 +373,22 @@ void StGraph::GenerateTrajectory(const ReferenceLine& reference_line,
                       st_spline_.SecondOrderDerivative(t));
     if (s[0] > maximum_s) break;
     gp_path.GetInterpolateNode(s[0], &d);
+    auto ref = reference_line.GetFrenetReferncePoint(s[0]);
     common::FrenetTransfrom::FrenetStateToState(
         common::FrenetState(s, d), reference_line.GetFrenetReferncePoint(s[0]),
         &state);
     state.stamp = t;
     state.frenet_d = d;
-    state.frenet_s = s;
     state.velocity = st_spline_.Derivative(t);
+
+    const double one_minus_kappa_rd = 1 - ref.kappa * d[0];
+
+    const double tan_delta_theta = d[1] / one_minus_kappa_rd;
+    const double delta_theta = std::atan2(d[1], one_minus_kappa_rd);
+    const double cos_delta_theta = std::cos(delta_theta);
+    // state.frenet_s[0] = ref.s;
+    // state.frenet_s[1] = s[1] * cos_delta_theta / one_minus_kappa_rd;
+    state.frenet_s = s;
     // LOG(INFO) << state.position.x();
     trajectory->emplace_back(state);
   }

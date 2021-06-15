@@ -249,7 +249,8 @@ bool GPPathOptimizer::DecideInitialPathBoundary(
       if (width < ego_width_ * 2) {
         expansion->cost += weight_width * (ego_width_ * 2 - width);
       }
-      // printf("(%d, %d), width: %f, cost: %f, angle diff: %f\n", current_idx + 1,
+      // printf("(%d, %d), width: %f, cost: %f, angle diff: %f\n", current_idx +
+      // 1,
       //        j, width, expansion->cost,
       //        NormalizeAngle(expansion->angle - candidate->angle));
       bfs_queue.push(std::move(expansion));

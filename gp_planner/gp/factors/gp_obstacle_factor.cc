@@ -46,6 +46,7 @@ gtsam::Vector GPObstacleFactor::evaluateError(
     H1->row(0) = J_err1 * CheckPointJacobian(x1, ls_ / 2);
     H1->row(1) = J_err2 * CheckPointJacobian(x1, ls_);
   }
+  // printf("err1: %f, err2: %f\n", err1, err2);
   return gtsam::Vector2(err1, err2);
 }
 }  // namespace planning

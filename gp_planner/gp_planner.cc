@@ -8,6 +8,7 @@
 
 #include "common/smoothing/osqp_spline2d_solver.h"
 #include "common/utils/color_map.h"
+#include "gp_planner/gp/gp_incremental_path_planner.h"
 #include "gp_planner/gp/gp_path_optimizer.h"
 #include "gp_planner/st_plan/st_graph.h"
 #include "planning_core/planning_common/planning_visual.h"
@@ -148,6 +149,49 @@ bool GPPlanner::ProcessObstacles(const std::vector<Obstacle>& raw_obstacles,
   return true;
 }
 
+bool GPPlanner::PlanWithGPIR(
+    const ReferenceLine& reference_line,
+    const std::vector<Obstacle>& dynamic_agents,
+    const std::vector<Eigen::Vector2d>& virtual_obstacles,
+    common::Trajectory* trajectory) {
+  const double length = reference_line.length();
+
+  std::vector<Obstacle> cirtical_agents;
+  ProcessObstacles(dynamic_agents, reference_line, &cirtical_agents);
+
+  OccupancyMap occupancy_map;
+  occupancy_map.set_origin({0, -5});
+  occupancy_map.set_cell_number(
+      std::array<int, 2>{(int)std::ceil(length / 0.1) + 100, 100});
+  occupancy_map.set_resolution({0.1, 0.1});
+
+  std::vector<double> obstacle_location_hint;
+  // proj virtual obstacles
+  for (const auto& point : virtual_obstacles) {
+    auto proj = reference_line.GetProjection(point);
+    occupancy_map.FillCircle(Eigen::Vector2d(proj.s, proj.d), 0.2);
+    obstacle_location_hint.emplace_back(proj.s);
+  }
+  // proj static obstacles
+
+  auto sdf = std::make_shared<SignedDistanceField2D>(std::move(occupancy_map));
+
+  common::FrenetState frenet_state;
+  auto ego_state = navigation_map_->ego_state();
+  reference_line.ToFrenetState(ego_state, &frenet_state);
+  if (!navigation_map_->trajectory().empty()) {
+    auto last_state =
+        navigation_map_->trajectory().GetNearestState(ego_state.position);
+    if (std::fabs(last_state.frenet_d[0] - frenet_state.d[0]) < 1.0) {
+      reference_line.ToFrenetState(last_state, &frenet_state);
+      frenet_state.d = last_state.frenet_d;
+    }
+  }
+
+  sdf->UpdateSDF();
+
+  GPIncrementalPathPlanner path_planner(sdf);
+  if (!path_planner.GenerateInitialGPPath(reference_line, )) }
 void GPPlanner::VisualizeTrajectory(
     const std::vector<std::pair<hdmap::LaneSegmentBehavior,
                                 common::Trajectory>>& trajectory_candidates) {
