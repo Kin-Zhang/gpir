@@ -264,13 +264,18 @@ void NavigationMap::UpdateVirtualObstacles() {
   virtual_obstacles_ = remaining_obstacles;
 
   if (add_virtual_obstacles_) {
+    static double sign = 1.0;
     const auto& target_lane = reference_lines_.front();
     common::FrenetPoint proj =
         virtual_obstacles_.empty()
             ? target_lane.GetProjection(data_frame_->state.position)
             : target_lane.GetProjection(virtual_obstacles_.back());
-    double obs_s = RandomDouble(proj.s + 40, proj.s + 60);
-    double obs_d = (RandomDouble(-1, 1) >= 0 ? 1 : -1) * RandomDouble(1.0, 1.5);
+    // double obs_s = RandomDouble(proj.s + 40, proj.s + 60);
+    // double obs_d = (RandomDouble(-1, 1) >= 0 ? 1 : -1) *
+    // RandomDouble(1.0, 1.5);
+    double obs_s = proj.s + 50;
+    double obs_d = sign * 1.0;
+    sign = -sign;
     Eigen::Vector2d obs_pos;
     target_lane.FrenetToCartesion(obs_s, obs_d, &obs_pos);
     virtual_obstacles_.emplace_back(obs_pos);

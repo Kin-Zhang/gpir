@@ -128,6 +128,9 @@ void PlanningCore::JoyCallBack(const sensor_msgs::Joy& joy) {
   } else if (joy.buttons[5] == 1) {
     LOG(INFO) << "Add virtual Obstacles";
     navigation_map_.RandomlyAddVirtualObstacles();
+  } else if (joy.buttons[6] == 1) {
+    LOG(INFO) << "Save snapshot of s-t graph";
+    planner_->LogDebugInfo();
   }
 }
 

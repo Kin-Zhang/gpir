@@ -57,13 +57,17 @@ void GPPath::GetInterpolateNode(const double s, Eigen::Vector3d* node) const {
 bool GPPath::HasOverlapWith(const common::State& state, const double length,
                             const double width, double* s_l,
                             double* s_u) const {
+  static const VehicleParam& ego_param =
+      VehicleInfo::Instance().vehicle_param();
+  static double ego_half_length = ego_param.length / 2;
+
   double inital_s = reference_line_->GetArcLength(state.position);
 
   common::State ego_state;
   GetState(inital_s, &ego_state);
   common::Box2D ego_box;
   GetEgoBox(ego_state, &ego_box);
-  common::Box2D obs_box(state.position, length, width, state.heading);
+  common::Box2D obs_box(state.position, length, width * 1.2, state.heading);
 
   if (!ego_box.HasOverlapWith(obs_box)) {
     *s_l = 0.0;
@@ -88,8 +92,8 @@ bool GPPath::HasOverlapWith(const common::State& state, const double length,
     backward_s -= kStepLength;
   }
 
-  *s_l = backward_s + kStepLength / 2.0;
-  *s_u = forward_s - kStepLength / 2.0;
+  *s_l = backward_s + kStepLength / 2.0;// - length / 2.0 - ego_half_length;
+  *s_u = forward_s - kStepLength / 2.0;// + length / 2.0 + ego_half_length;
 
   return true;
 }
@@ -102,7 +106,7 @@ void GPPath::GetEgoBox(const common::State& ego_state,
       ego_state.position + Eigen::Vector2d(std::cos(ego_state.heading),
                                            std::sin(ego_state.heading)) *
                                ego_param.rear_axle_to_center,
-      ego_param.length, ego_param.width, ego_state.heading);
+      ego_param.length, ego_param.width * 1.2, ego_state.heading);
 }
 
 void GPPath::UpdateNodes(const gtsam::Values& values) {

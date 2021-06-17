@@ -129,7 +129,7 @@ int main(int argc, char const* argv[]) {
     plt::legend();
 
     vector_Eigen3d frenet_s;
-    if (!st_graph.CheckTrajectory(gp_path, &frenet_s)) {
+    if (!st_graph.IsTrajectoryFeasible(gp_path, &frenet_s)) {
       path_planner.UpdateGPPath(reference_line, frenet_s, &gp_path);
     }
   }
@@ -155,7 +155,7 @@ int main(int argc, char const* argv[]) {
   // plt::plot(t1, k1);
 
   // vector_Eigen3d frenet_s;
-  // if (!st_graph.CheckTrajectory(gp_path, &frenet_s)) {
+  // if (!st_graph.IsTrajectoryFeasible(gp_path, &frenet_s)) {
   //   path_planner.UpdateGPPath(reference_line, frenet_s, &gp_path);
   //   common::Trajectory traj2;
   //   st_graph.GenerateTrajectory(reference_line, gp_path, &traj2);

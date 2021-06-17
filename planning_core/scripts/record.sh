@@ -18,4 +18,5 @@ rosbag record /tf \
               /virtual_obstacle \
               /reference_line \
               /gp_path \
-              /behavior_target_lane
+              /behavior_target_lane \
+              /joy

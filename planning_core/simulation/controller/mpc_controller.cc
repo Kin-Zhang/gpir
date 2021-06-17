@@ -67,8 +67,8 @@ bool MpcController::CalculateAckermannDrive(
 
   Eigen::Vector2d predict_pos = state.position;
   double predict_heading = state.heading;
-  double predict_v = state.velocity;
-  double predict_steer = state.steer;
+  double predict_v = last_control_[0];
+  double predict_steer = last_control_[1];
 
   for (int i = 0; i < predict_steps_; ++i) {
     predict_v = history_vel_[i];
@@ -85,7 +85,7 @@ bool MpcController::CalculateAckermannDrive(
   }
   auto ref_state = trajectory[ref_index];
   auto preview_state =
-      trajectory[std::min<int>(ref_index + 10, trajectory.size() - 1)];
+      trajectory[std::min<int>(ref_index + 20, trajectory.size() - 1)];
 
   MatrixXd matrix_a = MatrixXd::Zero(nx_, nx_);
   MatrixXd matrix_b = MatrixXd::Zero(nx_, nu_);
@@ -121,7 +121,7 @@ bool MpcController::CalculateAckermannDrive(
   matrix_initial_x(2, 0) =
       common::NormalizeAngle(predict_heading - ref_state.heading);
   matrix_initial_x(3, 0) =
-      std::min(std::max(state.velocity - ref_v, matrix_xmin_relative_(3, 0)),
+      std::min(std::max(last_control_[0] - ref_v, matrix_xmin_relative_(3, 0)),
                matrix_xmax_relative_(3, 0));
   matrix_initial_x(4, 0) = std::min(
       std::max(last_control_[1] - ref_steer, matrix_xmin_relative_(4, 0)),
@@ -141,7 +141,7 @@ bool MpcController::CalculateAckermannDrive(
     return false;
   }
 
-  double optimal_speed = state.velocity + optimal_control[0];
+  double optimal_speed = std::min(last_control_[0] + optimal_control[0], ref_v);
   double optimal_accel = optimal_control[0];
   double optimal_steer = last_control_[1] + optimal_control[1];
   double optimal_steer_rate = optimal_control[1];

@@ -164,7 +164,7 @@ bool GPIncrementalPathPlanner::GenerateInitialGPPath(
 
       graph_.add(GPPriorFactor(last_key, key, interval_, kQc));
 
-      if (current_s > 0) {
+      if (current_s > initial_state.s[1] * 3) {
         graph_.add(PriorFactor3(key, x_ref, sigma_reference));
       }
       graph_.add(
@@ -215,7 +215,7 @@ bool GPIncrementalPathPlanner::GenerateInitialGPPath(
   gtsam::LevenbergMarquardtParams param;
   param.setlambdaInitial(100.0);
   param.setAbsoluteErrorTol(1e-5);
-  param.setVerbosity("ERROR");
+  // param.setVerbosity("ERROR");
   // param.se
 
   gtsam::LevenbergMarquardtOptimizer opt(graph_, init_values, param);

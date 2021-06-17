@@ -16,10 +16,14 @@ class GPPlanner : public Planner {
   void Init() override;
   void PlanOnce(NavigationMap* navigation_map_) override;
 
+  void LogDebugInfo() override { save_snapshot_ = true; }
+
  protected:
-  bool PlanWithGPIR(const ReferenceLine& reference_line,
+  bool PlanWithGPIR(const common::State& ego_state,
+                    const ReferenceLine& reference_line,
                     const std::vector<Obstacle>& dynamic_agents,
                     const std::vector<Eigen::Vector2d>& virtual_obstacles,
+                    const common::Trajectory& last_trajectory,
                     common::Trajectory* trajectory);
 
  private:
@@ -46,10 +50,13 @@ class GPPlanner : public Planner {
   VehicleParam vehicle_param_;
 
   int max_iter = 5;
+  double reference_speed_ = 0.0;
   const double lateral_critical_thereshold_ = 6;
 
   std::vector<Obstacle> static_obstacles_;
   std::vector<Obstacle> dynamic_obstacles_;
+
+  bool save_snapshot_ = true;
 
   hdmap::LaneSegmentBehavior last_behavior_ = hdmap::LaneSegmentBehavior::kKeep;
 };

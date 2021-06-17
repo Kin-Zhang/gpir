@@ -28,8 +28,8 @@ void StNode::CalObstacleCost(const double d) {
   constexpr double kMinSafeDistance = 1.0;
   if (d <= kMinSafeDistance) {
     cost += 1e9;
-  } else if (d <= v * v / 8) {
-    cost += weights_.obstacle * (v * v / 8 - d);
+  } else if (d < 10) {
+    cost += weights_.obstacle * 10 / d;
   }
 }
 }  // namespace planning

@@ -38,11 +38,11 @@ bool AdMapVisual::LaneToMarker(const ad::map::lane::Lane& lane,
                                visualization_msgs::Marker* left_edge,
                                visualization_msgs::Marker* right_edge,
                                visualization_msgs::Marker* center) {
-  LaneEdgeToMarker(lane.edgeLeft.private_enuEdgeCache.enuEdge, 0.05, id_cnt++,
+  LaneEdgeToMarker(lane.edgeLeft.private_enuEdgeCache.enuEdge, 0.15, id_cnt++,
                    common::kBlack, 0.8, left_edge);
-  LaneEdgeToMarker(lane.edgeRight.private_enuEdgeCache.enuEdge, 0.05, id_cnt++,
+  LaneEdgeToMarker(lane.edgeRight.private_enuEdgeCache.enuEdge, 0.15, id_cnt++,
                    common::kBlack, 0.8, right_edge);
-  LaneEdgeToMarker(lane.center, 0.05, id_cnt++, common::kRoyalBlue, 1.0,
+  LaneEdgeToMarker(lane.center, 0.1, id_cnt++, common::kRoyalBlue, 1.0,
                    center);
   return true;
 }

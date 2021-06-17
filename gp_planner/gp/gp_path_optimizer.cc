@@ -177,8 +177,8 @@ bool GPPathOptimizer::GenerateGPPath(
   // }
 
   // sdf_->mutable_occupancy_map()->PolyLine(points);
-  // cv::imshow("path", sdf_->occupancy_map().BinaryImage());
-  // cv::waitKey(50);
+  cv::imshow("path", sdf_->occupancy_map().BinaryImage());
+  cv::waitKey(50);
   return true;
 }
 

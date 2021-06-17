@@ -38,7 +38,7 @@ class StGraph {
 
   bool GenerateInitialSpeedProfile(const GPPath& gp_path);
 
-  bool CheckTrajectory(const GPPath& gp_path, vector_Eigen3d* frenet_s);
+  bool IsTrajectoryFeasible(const GPPath& gp_path, vector_Eigen3d* frenet_s);
 
   bool UpdateSpeedProfile(const GPPath& gp_path);
 
@@ -69,6 +69,8 @@ class StGraph {
   double a_max_ = 2.0;
   double a_min_ = -4.0;
   const double lat_a_max_ = 4.0;
+
+  double max_arc_length_ = 0.0;
 
   std::unique_ptr<SignedDistanceField2D> sdf_;
   std::vector<std::vector<std::vector<StPoint>>> st_block_segments_;
