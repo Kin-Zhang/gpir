@@ -91,7 +91,7 @@ int main(int argc, char const* argv[]) {
   st_graph.SetInitialState(Eigen::Vector3d(initial_state.position.x(),
                                            initial_state.velocity,
                                            initial_state.acceleration));
-  st_graph.SetReferenceSpeed(10);
+  st_graph.SetReferenceSpeed(15);
   st_graph.BuildStGraph(dynamic_obstacle, gp_path);
   std::vector<StNode> st_nodes;
   st_graph.SearchWithLocalTruncation(13, &st_nodes);
@@ -107,32 +107,42 @@ int main(int argc, char const* argv[]) {
 
     // recording
     std::string index = std::to_string(i);
-    std::vector<double> t1, x1, y1, v1, lat_a1, lat_v1, k1;
+    std::vector<double> t1, x1, y1, v1, lat_a1, lat_v1, k1,s;
     for (const auto& p : traj) {
       t1.emplace_back(p.stamp);
       x1.emplace_back(p.position.x());
       y1.emplace_back(p.position.y());
+      v1.emplace_back(p.velocity);
+      s.emplace_back(p.frenet_s[0]);
       lat_a1.emplace_back(p.frenet_d[2] * p.frenet_s[1] * p.frenet_s[1] +
                           p.frenet_d[1] * p.frenet_s[2]);
       lat_v1.emplace_back(p.frenet_d[1] * p.frenet_s[1]);
       k1.emplace_back(p.kappa);
     }
-    plt::subplot(3, 1, 1);
+    plt::subplot(4, 1, 1);
     plt::named_plot(index, x1, y1);
     plt::legend();
     plt::axis("equal");
-    plt::subplot(3, 1, 2);
+    plt::subplot(4, 1, 2);
     plt::named_plot(index, t1, lat_a1);
     plt::legend();
-    plt::subplot(3, 1, 3);
-    plt::named_plot(index, t1, k1);
+    plt::subplot(4, 1, 3);
+    plt::named_plot(index, t1, lat_v1);
+    plt::subplot(4, 1, 4);
+    plt::named_plot(index, t1, v1);
     plt::legend();
 
     vector_Eigen3d frenet_s;
     if (!st_graph.IsTrajectoryFeasible(gp_path, &frenet_s)) {
+      LOG(INFO) << "WTF";
       path_planner.UpdateGPPath(reference_line, frenet_s, &gp_path);
+      LOG(INFO) << "WTF2";
+      st_graph.UpdateSpeedProfile(gp_path);
     }
   }
+  // plt::subplot(3, 1, 2);
+  // plt::plot(std::vector<double>{0, 6}, std::vector<double>{4.0, 4.0});
+  // plt::plot(std::vector<double>{0, 6}, std::vector<double>{-4.0, -4.0});
 
   // common::Trajectory traj;
   // st_graph.GenerateTrajectory(reference_line, gp_path, &traj);

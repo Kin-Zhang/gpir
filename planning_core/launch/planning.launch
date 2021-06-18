@@ -13,9 +13,9 @@
 </node>
 
 <node pkg="planning_core" name="carla_controller" type="carla_controller" output="screen">
-  <param name="kp" value="2.0"/>
-  <param name="ki" value="0.05"/>
-  <param name="kd" value="0.1"/>
+  <param name="kp" value="3.5"/>
+  <param name="ki" value="0.15"/>
+  <param name="kd" value="0.4"/>
 </node>
 
 <!-- rviz -->

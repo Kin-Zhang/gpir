@@ -164,9 +164,12 @@ bool GPIncrementalPathPlanner::GenerateInitialGPPath(
 
       graph_.add(GPPriorFactor(last_key, key, interval_, kQc));
 
-      if (current_s > initial_state.s[1] * 3) {
+      if (current_s > 30) {
         graph_.add(PriorFactor3(key, x_ref, sigma_reference));
       }
+      // if (current_s > initial_state.s[1] * 3) {
+      //   graph_.add(PriorFactor3(key, x_ref, sigma_reference));
+      // }
       graph_.add(
           GPObstacleFactor(key, sdf_, 0.01, kEpsilon, current_s, kappa_r));
       graph_.add(GPKappaLimitFactor(key, 0.01, kappa_r, dkappa_r, kappa_limit_,
@@ -245,6 +248,7 @@ bool GPIncrementalPathPlanner::UpdateGPPath(const ReferenceLine& reference_line,
   for (int i = 0; i < frenet_s.size(); ++i) {
     int index =
         std::floor((frenet_s[i](0) - node_locations_.front()) / interval_);
+    if (index < 0) continue;
     printf("%d: s: %f, index: %d\n", i, frenet_s[i](0), index);
     gtsam::Symbol begin_node('x', index), end_node('x', index + 1);
     graph_.add(GPLatAccLimitFactor(begin_node, end_node, kQc, interval_,

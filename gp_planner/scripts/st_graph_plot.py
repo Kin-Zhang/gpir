@@ -6,12 +6,14 @@ import sys
 
 print(sys.argv[0])
 
-ref_v = sys.argv[2]
 
-block_region = pd.read_csv("../data/block_region_" + sys.argv[1] + ".csv", sep=",")
-st_nodes = pd.read_csv("../data/st_node_" + sys.argv[1] + ".csv", sep=",")
+# ref_v = sys.argv[2]
 
-fig, ax = plt.subplots(1, 1, figsize=fu.set_size("ral"))
+block_region = pd.read_csv("../data1/block_region_" + sys.argv[1] + ".csv", sep=",")
+st_nodes = pd.read_csv("../data1/st_node_" + sys.argv[1] + ".csv", sep=",")
+
+fig, ax = plt.subplots(1, 1, figsize=fu.set_size('ral',0.5))
+# fig, ax = plt.subplots(1, 1)
 # axin = ax.inset_axes([0.1, 0.55, 0.35, 0.35])
 
 start_s = 0
@@ -49,10 +51,34 @@ t = np.linspace(0, 5, 100)
 s_lower = start_s + start_v * t - 0.5 * 4 * t ** 2
 ax.plot(t, s_lower, lw=1.5, color=bound_color)
 
-reference = start_s + float(ref_v) * t
-ax.plot(t, reference, lw=1.5, color='b')
+# reference = start_s + float(ref_v) * t
+# ax.plot(t, reference, lw=1.5, color='b')
 
 zoom_color = "darkblue"
+tex_fonts = {
+    # Use LaTeX to write all text
+    "text.usetex": True,
+    "font.family": "Times New Roman",
+    # Use 10pt font in plots, to match 10pt font in document
+    # "axes.labelsize": 1,
+    # "font.size": 1,
+    # Make the legend/label fonts a little smaller
+    # "legend.fontsize": 8,
+    # "xtick.labelsize": 5,
+    # "ytick.labelsize": 5,
+    "axes.formatter.use_mathtext":True
+}
+plt.rcParams.update(tex_fonts)
+ax.tick_params(axis='both', which='major', labelsize=6)
+ax.tick_params(axis='both', which='minor', labelsize=5)
+ax.tick_params(axis="y",direction="in")
+ax.tick_params(axis="x",direction="in")
+plt.xticks(fontname = "Times New Roman")
+plt.yticks(fontname = "Times New Roman")
+ax.set_xlabel("$t$(s)", fontsize=6)
+ax.set_ylabel("$s$(m)", fontsize=6, rotation=0)
+ax.xaxis.set_label_coords(0.9, 0.1)
+ax.yaxis.set_label_coords(0.1, 0.85)
 
 # axin.set_xlim(2.5, 3.5)
 # axin.set_ylim(36, 46)
@@ -63,32 +89,22 @@ zoom_color = "darkblue"
 # pp2.loc1 = 4
 # pp2.loc2 = 1
 
-fu.set_axis_off(ax)
+# fu.set_axis_off(ax)
 # fu.set_axis_off(axin)
 
 # fu.set_axis_color(axin, zoom_color)
 
-tex_fonts = {
-    # Use LaTeX to write all text
-    "text.usetex": True,
-    "font.family": "Times New Roman",
-    # Use 10pt font in plots, to match 10pt font in document
-    "axes.labelsize": 10,
-    "font.size": 10,
-    # Make the legend/label fonts a little smaller
-    "legend.fontsize": 8,
-    "xtick.labelsize": 8,
-    "ytick.labelsize": 8,
-}
-plt.rcParams.update(tex_fonts)
 # ax.set_xticks(np.linspace(0, 8, 9))
 # ax.set_yticks(np.linspace(0, 120, 60))
-# ax.grid(alpha=0.3)
-ax.text(8, 15, "t")
-ax.text(-0.1, 160, "s")
+ax.grid(alpha=0.3)
+# ax.tick_params(axis="y", direction="in", length=2)
+# ax.tick_params(axis="x", direction="in", length=2)
+# ax.text(8, 15, "t")
+# ax.text(-0.1, 160, "s")
+# ax.set_xlabel("$t(second)$", fontsize=10)
+# ax.set_ylabel("$s(meter)$", fontsize=10)
 
-# fig.savefig(
-#     "../figure/st_node.pdf", format="pdf", bbox_inches="tight", pad_inches=0, dpi=300
-# )
 
+
+fig.savefig("/home/udi/research/ral2021_gpir/figure/oads_st2.pdf", format="pdf", bbox_inches="tight", pad_inches=0, dpi=300)
 plt.show()

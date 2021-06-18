@@ -102,8 +102,8 @@ int main(int argc, char* argv[]) {
   ros::Rate rate(50);
   while (ros::ok()) {
     ros::spinOnce();
-    double acc = speed_controller.Control(target_speed - current_speed, 0.02) +
-                 0.7 * target_acc;
+    double acc = speed_controller.Control(target_speed - current_speed, 0.02);
+               //  0.5 * target_acc;
     printf("current: %f, target: %f, acc: %f\n", current_speed, target_speed,
            acc);
 

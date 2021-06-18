@@ -255,21 +255,21 @@ class KeyboardHandler:
                     # actor1 = self.agent_generator.spawn_agent_at("front_left", 8)
                     # actor2 = self.agent_generator.spawn_agent_at("front_left", 16)
                     actor1 = self.agent_generator.spawn_agent_at("front", 60)
-                    self.agent_generator.set_speed_percentage_difference(actor1, -100.0)
+                    self.agent_generator.set_speed_percentage_difference(actor1, -50.0)
                     # actor2 = self.agent_generator.spawn_agent_at("front_left", 32)
-                    actor2 = self.agent_generator.spawn_agent_at("front_left", 20)
-                    self.agent_generator.set_speed_percentage_difference(actor2, -150.0)
-                    actor3 = self.agent_generator.spawn_agent_at("back_left", -20)
-                    # self.agent_generator.set_speed_percentage_difference(actor3, -130.0)
-                    actor4 = self.agent_generator.spawn_agent_at("front_right", 0)
-                    self.agent_generator.set_speed_percentage_difference(actor4, -135.0)
+                    actor2 = self.agent_generator.spawn_agent_at("front_left", 12)
+                    self.agent_generator.set_speed_percentage_difference(actor2, -120.0)
+                    actor3 = self.agent_generator.spawn_agent_at("back_left", -12)
+                    self.agent_generator.set_speed_percentage_difference(actor3, -120.0)
+                    actor4 = self.agent_generator.spawn_agent_at("front_right", 14)
+                    self.agent_generator.set_speed_percentage_difference(actor4, -100.0)
                     # actor3 = self.agent_generator.spawn_agent_at("front_right", 32)
                     # actor3 = self.agent_generator.spawn_agent_at("front_right", 40)
                     self.agent_generator.set_auto_lane_change(False)
                     self.agent_generator.set_ignore_light_percentage(100.0)
 
     def destroy(self):
-        # self.agent_generator.destory()
+        self.agent_generator.destory()
         pass
 
 
