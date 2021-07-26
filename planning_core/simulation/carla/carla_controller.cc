@@ -96,21 +96,21 @@ int main(int argc, char* argv[]) {
       "/carla/ego_vehicle/vehicle_control_cmd", 1);
 
   PIDController speed_controller(kp, ki, kd);
-  speed_controller.SetOutputLimit(3.7, -8);
-  speed_controller.SetIntegralLimit(10, -15.0);
+  speed_controller.SetOutputLimit(4.0, -8);
+  speed_controller.SetIntegralLimit(20, -15.0);
 
   ros::Rate rate(50);
   while (ros::ok()) {
     ros::spinOnce();
-    double acc = speed_controller.Control(target_speed - current_speed, 0.02) +
-                 target_acc;
+    double acc = speed_controller.Control(target_speed - current_speed, 0.02);
+               //  0.5 * target_acc;
     printf("current: %f, target: %f, acc: %f\n", current_speed, target_speed,
            acc);
 
     carla_msgs::CarlaEgoVehicleControl control_cmd;
     control_cmd.header.stamp = ros::Time::now();
     if (acc >= 0) {
-      control_cmd.throttle = std::min(acc / 3.7, 1.0);
+      control_cmd.throttle = std::min(acc / 4.0, 1.0);
       control_cmd.brake = 0.0;
     } else {
       control_cmd.throttle = 0.0;

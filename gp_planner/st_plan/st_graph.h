@@ -36,6 +36,12 @@ class StGraph {
 
   bool SearchWithLocalTruncation(const int k, std::vector<StNode>* result);
 
+  bool GenerateInitialSpeedProfile(const GPPath& gp_path);
+
+  bool IsTrajectoryFeasible(const GPPath& gp_path, vector_Eigen3d* frenet_s);
+
+  bool UpdateSpeedProfile(const GPPath& gp_path);
+
   bool OptimizeTest();
 
   void GenerateTrajectory(const ReferenceLine& reference_line,
@@ -48,10 +54,12 @@ class StGraph {
 
   const OccupancyMap& grid_map() const { return sdf_->occupancy_map(); }
 
- private:
+ private: 
   void GetObstacleBlockSegment(
       const Obstacle& obstacle, const GPPath& gp_path,
       std::vector<std::vector<StPoint>>* st_block_segment);
+
+  void GetFrenetState(const double t, Eigen::Vector3d* s);
 
  private:
   Eigen::Vector3d init_s_;
@@ -60,12 +68,18 @@ class StGraph {
   double safety_margin_ = 0.0;
   double a_max_ = 2.0;
   double a_min_ = -4.0;
+  const double lat_a_max_ = 4.0;
+
+  double max_arc_length_ = 0.0;
 
   std::unique_ptr<SignedDistanceField2D> sdf_;
   std::vector<std::vector<std::vector<StPoint>>> st_block_segments_;
   std::vector<std::vector<std::unique_ptr<StNode>>> search_tree_;
 
   std::vector<StNode> st_nodes_;
+
+  const double step_length_ = 0.2;
+  std::vector<double> t_knots_;
   common::Spline1d st_spline_;
 };
 

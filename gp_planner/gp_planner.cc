@@ -8,6 +8,8 @@
 
 #include "common/smoothing/osqp_spline2d_solver.h"
 #include "common/utils/color_map.h"
+#include "common/utils/io_utils.h"
+#include "gp_planner/gp/gp_incremental_path_planner.h"
 #include "gp_planner/gp/gp_path_optimizer.h"
 #include "gp_planner/st_plan/st_graph.h"
 #include "planning_core/planning_common/planning_visual.h"
@@ -24,93 +26,151 @@ void GPPlanner::Init() {
       "/behavior_target_lane", 1);
 
   vehicle_param_ = VehicleInfo::Instance().vehicle_param();
+
+  recorder_ = std::make_unique<std::ofstream>(
+      "/home/udi/research/gpir_ws/src/gpir/gp_planner/data/"
+      "computation_time.csv",
+      std::ios::trunc);
+
+  // common::DotLog(*recorder_, "sdf", "init_path", "init_st", "refinement");
 }
 
+// void GPPlanner::PlanOnce(NavigationMap* navigation_map_) {
+//   const auto& reference_lines = navigation_map_->reference_lines();
+//   const auto& virtual_obstacles = navigation_map_->virtual_obstacles();
+//   const auto& obstacles = navigation_map_->obstacles();
+
+//   std::vector<Obstacle> critical_obstacles;
+//   std::vector<std::pair<hdmap::LaneSegmentBehavior, common::Trajectory>>
+//       trajectory_candidate;
+
+//   for (const auto& reference_line : reference_lines) {
+//     const double length = reference_line.length();
+
+//     ProcessObstacles(obstacles, reference_line, &critical_obstacles);
+
+//     OccupancyMap occupancy_map;
+//     occupancy_map.set_origin({0, -5});
+//     occupancy_map.set_cell_number(
+//         std::array<int, 2>{(int)std::ceil(length / 0.1), 100});
+//     occupancy_map.set_resolution({0.1, 0.1});
+
+//     std::vector<double> obstacle_location_hint;
+//     // proj virtual obstacles
+//     for (const auto& point : virtual_obstacles) {
+//       auto proj = reference_line.GetProjection(point);
+//       occupancy_map.FillCircle(Eigen::Vector2d(proj.s, proj.d), 0.2);
+//       obstacle_location_hint.emplace_back(proj.s);
+//     }
+//     // proj static obstacles
+
+//     auto sdf =
+//         std::make_shared<SignedDistanceField2D>(std::move(occupancy_map));
+//     sdf->UpdateSDF();
+
+//     // decide planning start point
+//     common::FrenetState frenet_state;
+//     auto ego_state = navigation_map_->ego_state();
+//     reference_line.ToFrenetState(ego_state, &frenet_state);
+//     if (!navigation_map_->trajectory().empty()) {
+//       auto last_state =
+//           navigation_map_->trajectory().GetNearestState(ego_state.position);
+//       if (std::fabs(last_state.frenet_d[0] - frenet_state.d[0]) < 1.0) {
+//         reference_line.ToFrenetState(last_state, &frenet_state);
+//         frenet_state.d = last_state.frenet_d;
+//       }
+//     }
+
+//     // GP path planning
+//     GPPath gp_path;
+//     GPPathOptimizer gp_path_optimizer(sdf);
+//     if (!gp_path_optimizer.GenerateGPPath(reference_line, frenet_state, 90,
+//                                           obstacle_location_hint, &gp_path))
+//                                           {
+//       LOG(ERROR) << "GP path planning failed";
+//       return;
+//     }
+
+//     // speed profile generation
+//     reference_line.ToFrenetState(ego_state, &frenet_state);
+//     StGraph st_graph(frenet_state.s);
+//     LOG(INFO) << frenet_state.DebugString();
+//     st_graph.SetReferenceSpeed(navigation_map_->reference_speed());
+//     st_graph.BuildStGraph(critical_obstacles, gp_path);
+//     if (!st_graph.SearchWithLocalTruncation(13, nullptr)) {
+//       LOG(ERROR) << "ST graph search failed";
+//       return;
+//     }
+//     if (!st_graph.OptimizeTest()) {
+//       LOG(ERROR) << "Fail to optimize speed profile";
+//       st_graph.VisualizeStGraph();
+//       return;
+//     }
+//     trajectory_candidate.emplace_back();
+//     st_graph.GenerateTrajectory(reference_line, gp_path,
+//                                 &trajectory_candidate.back().second);
+//     trajectory_candidate.back().first = reference_line.behavior();
+//   }
+//   navigation_map_->mutable_trajectory()->clear();
+//   *navigation_map_->mutable_trajectory() =
+//   trajectory_candidate.front().second;
+//   navigation_map_->SetPlannerLCFeedback(trajectory_candidate.front().first !=
+//                                         hdmap::LaneSegmentBehavior::kKeep);
+//   last_behavior_ = trajectory_candidate.front().first;
+
+//   VisualizeTrajectory(trajectory_candidate);
+//   VisualizeTargetLane(
+//       reference_lines[reference_lines.size() - trajectory_candidate.size()]);
+//   VisualizeCriticalObstacle(critical_obstacles);
+// }
+
 void GPPlanner::PlanOnce(NavigationMap* navigation_map_) {
+  const auto& ego_state = navigation_map_->ego_state();
   const auto& reference_lines = navigation_map_->reference_lines();
   const auto& virtual_obstacles = navigation_map_->virtual_obstacles();
   const auto& obstacles = navigation_map_->obstacles();
+  reference_speed_ = navigation_map_->reference_speed();
 
-  std::vector<Obstacle> critical_obstacles;
   std::vector<std::pair<hdmap::LaneSegmentBehavior, common::Trajectory>>
       trajectory_candidate;
 
+  int count = 0;
   for (const auto& reference_line : reference_lines) {
-    const double length = reference_line.length();
-
-    ProcessObstacles(obstacles, reference_line, &critical_obstacles);
-
-    OccupancyMap occupancy_map;
-    occupancy_map.set_origin({0, -5});
-    occupancy_map.set_cell_number(
-        std::array<int, 2>{(int)std::ceil(length / 0.1), 100});
-    occupancy_map.set_resolution({0.1, 0.1});
-
-    std::vector<double> obstacle_location_hint;
-    // proj virtual obstacles
-    for (const auto& point : virtual_obstacles) {
-      auto proj = reference_line.GetProjection(point);
-      occupancy_map.FillCircle(Eigen::Vector2d(proj.s, proj.d), 0.2);
-      obstacle_location_hint.emplace_back(proj.s);
+    TIC;
+    trajectory_index_ = count;
+    common::Trajectory trajectroy;
+    if (!PlanWithGPIR(ego_state, reference_line, obstacles, virtual_obstacles,
+                      navigation_map_->trajectory(), &trajectroy)) {
+      LOG(ERROR) << "[Plan]: planning for "
+                 << ToString(reference_line.behavior()) << " failed";
+    } else {
+      trajectory_candidate.emplace_back(
+          std::make_pair(reference_line.behavior(), trajectroy));
+      // if (count == 0) {
+      //   common::DotLog(*recorder_, time_consuption_.sdf,
+      //                  time_consuption_.init_path, time_consuption_.init_st,
+      //                  time_consuption_.refinement);
+      // }
     }
-    // proj static obstacles
-
-    auto sdf =
-        std::make_shared<SignedDistanceField2D>(std::move(occupancy_map));
-    sdf->UpdateSDF();
-
-    // decide planning start point
-    common::FrenetState frenet_state;
-    auto ego_state = navigation_map_->ego_state();
-    reference_line.ToFrenetState(ego_state, &frenet_state);
-    if (!navigation_map_->trajectory().empty()) {
-      auto last_state =
-          navigation_map_->trajectory().GetNearestState(ego_state.position);
-      if (std::fabs(last_state.frenet_d[0] - frenet_state.d[0]) < 1.0) {
-        reference_line.ToFrenetState(last_state, &frenet_state);
-        frenet_state.d = last_state.frenet_d;
-      }
-    }
-
-    // GP path planning
-    GPPath gp_path;
-    GPPathOptimizer gp_path_optimizer(sdf);
-    if (!gp_path_optimizer.GenerateGPPath(reference_line, frenet_state, 90,
-                                          obstacle_location_hint, &gp_path)) {
-      LOG(ERROR) << "GP path planning failed";
-      return;
-    }
-
-    // speed profile generation
-    reference_line.ToFrenetState(ego_state, &frenet_state);
-    StGraph st_graph(frenet_state.s);
-    LOG(INFO) << frenet_state.DebugString();
-    st_graph.SetReferenceSpeed(navigation_map_->reference_speed());
-    st_graph.BuildStGraph(critical_obstacles, gp_path);
-    if (!st_graph.SearchWithLocalTruncation(13, nullptr)) {
-      LOG(ERROR) << "ST graph search failed";
-      return;
-    }
-    if (!st_graph.OptimizeTest()) {
-      LOG(ERROR) << "Fail to optimize speed profile";
-      st_graph.VisualizeStGraph();
-      return;
-    }
-    trajectory_candidate.emplace_back();
-    st_graph.GenerateTrajectory(reference_line, gp_path,
-                                &trajectory_candidate.back().second);
-    trajectory_candidate.back().first = reference_line.behavior();
+    ++count;
+    TOC("GPIR");
   }
-  navigation_map_->mutable_trajectory()->clear();
-  *navigation_map_->mutable_trajectory() = trajectory_candidate.front().second;
-  navigation_map_->SetPlannerLCFeedback(trajectory_candidate.front().first !=
-                                        hdmap::LaneSegmentBehavior::kKeep);
-  last_behavior_ = trajectory_candidate.front().first;
+
+  if (!trajectory_candidate.empty()) {
+    *navigation_map_->mutable_trajectory() =
+        trajectory_candidate.front().second;
+    navigation_map_->SetPlannerLCFeedback(trajectory_candidate.front().first !=
+                                          hdmap::LaneSegmentBehavior::kKeep);
+    last_behavior_ = trajectory_candidate.front().first;
+  } else {
+    LOG(ERROR) << "[Plan]: cannot find valid trajectory, planning failed";
+    navigation_map_->mutable_trajectory()->clear();
+  }
 
   VisualizeTrajectory(trajectory_candidate);
-  VisualizeTargetLane(
-      reference_lines[reference_lines.size() - trajectory_candidate.size()]);
-  VisualizeCriticalObstacle(critical_obstacles);
+  VisualizeTargetLane(reference_lines[std::min(
+      reference_lines.size() - 1,
+      reference_lines.size() - trajectory_candidate.size())]);
 }
 
 bool GPPlanner::ProcessObstacles(const std::vector<Obstacle>& raw_obstacles,
@@ -145,6 +205,100 @@ bool GPPlanner::ProcessObstacles(const std::vector<Obstacle>& raw_obstacles,
       cirtical_obstacles->emplace_back(obstacle);
     }
   }
+  return true;
+}
+
+bool GPPlanner::PlanWithGPIR(
+    const common::State& ego_state, const ReferenceLine& reference_line,
+    const std::vector<Obstacle>& dynamic_agents,
+    const std::vector<Eigen::Vector2d>& virtual_obstacles,
+    const common::Trajectory& last_trajectory, common::Trajectory* trajectory) {
+  common::Timer timer;
+  time_consuption_ = TimeConsumption();
+
+  const double length = reference_line.length();
+
+  std::vector<Obstacle> cirtical_agents;
+  ProcessObstacles(dynamic_agents, reference_line, &cirtical_agents);
+
+  timer.Start();
+  OccupancyMap occupancy_map({0, -5}, {std::ceil(length / 0.1) + 100, 100},
+                             {0.1, 0.1});
+
+  std::vector<double> obstacle_location_hint;
+  for (const auto& point : virtual_obstacles) {
+    auto proj = reference_line.GetProjection(point);
+    occupancy_map.FillCircle(Eigen::Vector2d(proj.s, proj.d), 0.2);
+    obstacle_location_hint.emplace_back(proj.s);
+  }
+  auto sdf = std::make_shared<SignedDistanceField2D>(std::move(occupancy_map));
+  sdf->UpdateSDF();
+  time_consuption_.sdf = timer.EndThenReset();
+
+  common::FrenetState frenet_state;
+  reference_line.ToFrenetState(ego_state, &frenet_state);
+  if (!last_trajectory.empty()) {
+    auto last_state = last_trajectory.GetNearestState(ego_state.position);
+    if (std::fabs(last_state.frenet_d[0] - frenet_state.d[0]) < 1.0) {
+      reference_line.ToFrenetState(last_state, &frenet_state);
+      frenet_state.d = last_state.frenet_d;
+      // frenet_state.s = last_state.frenet_s;
+    }
+  }
+
+  GPPath gp_path;
+  GPIncrementalPathPlanner gp_path_planner(sdf);
+  if (!gp_path_planner.GenerateInitialGPPath(reference_line, frenet_state, 100,
+                                             obstacle_location_hint,
+                                             &gp_path)) {
+    LOG(ERROR) << "[GPPlanner]: fail to generate initla path";
+    return false;
+  }
+  time_consuption_.init_path = timer.EndThenReset();
+
+  reference_line.ToFrenetState(ego_state, &frenet_state);
+  StGraph st_graph(frenet_state.s);
+  st_graph.SetReferenceSpeed(reference_speed_);
+  st_graph.BuildStGraph(cirtical_agents, gp_path);
+  if (!st_graph.SearchWithLocalTruncation(13, nullptr)) {
+    LOG(ERROR) << "[StGraph]: fail to find initial speed profile";
+    return false;
+  }
+
+  if (!st_graph.GenerateInitialSpeedProfile(gp_path)) {
+    LOG(ERROR) << "[StGraph]: fail to optimize inital speed profile";
+    return false;
+  }
+  time_consuption_.init_st = timer.EndThenReset();
+
+  if (save_snapshot_) {
+    st_graph.SaveSnapShot(
+        "/home/udi/research/gpir_ws/src/gpir/gp_planner/data");
+    save_snapshot_ = false;
+  }
+
+  int iter_count = 0;
+  vector_Eigen3d invalid_lat_frenet_s;
+  while (trajectory_index_ < 1 &&
+         !st_graph.IsTrajectoryFeasible(gp_path, &invalid_lat_frenet_s)) {
+    gp_path_planner.UpdateGPPath(reference_line, invalid_lat_frenet_s,
+                                 &gp_path);
+    // gp_path_planner.UpdateGPPathNonIncremental(reference_line,
+    //                                            invalid_lat_frenet_s,
+    //                                            &gp_path);
+    // st_graph.UpdateSpeedProfile(gp_path);
+    if (iter_count++ == max_iter) {
+      LOG(WARNING) << "[GPIR]: reach maximum iterations";
+      break;
+    }
+  }
+  if (iter_count != 0) {
+    time_consuption_.refinement = timer.EndThenReset();
+  }
+  LOG(INFO) << "[GPIR]: takes " << iter_count << " iterations";
+  st_graph.GenerateTrajectory(reference_line, gp_path, trajectory);
+
+  VisualizeCriticalObstacle(cirtical_agents);
   return true;
 }
 

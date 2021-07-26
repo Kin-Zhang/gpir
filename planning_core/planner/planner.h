@@ -13,6 +13,7 @@ class Planner {
 
   virtual void Init() = 0;
   virtual void PlanOnce(NavigationMap* navigation_map_) = 0;
+  virtual void LogDebugInfo() {}
 };
 
 }  // namespace planning

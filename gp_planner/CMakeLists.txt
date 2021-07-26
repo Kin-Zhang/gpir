@@ -33,6 +33,7 @@ include_directories(SYSTEM
 )
 include_directories(
   ${CMAKE_SOURCE_DIR}/gpir
+  ${CMAKE_BINARY_DIR}/gpir
   "./thirdparty/traj_min_jerk"
 )
 
@@ -41,6 +42,7 @@ add_subdirectory(sdf)
 add_subdirectory(initializer)
 add_subdirectory(st_plan)
 add_subdirectory(examples)
+add_subdirectory(benchmark)
 
 add_library(gp_planner gp_planner.cc)
 target_link_libraries(gp_planner

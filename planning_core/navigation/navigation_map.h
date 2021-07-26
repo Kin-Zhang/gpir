@@ -44,7 +44,10 @@ class NavigationMap {
 
   void AdjustReferenceSpeed(const double delta) { adjust_speed_ += delta; }
 
-  void RandomlyAddVirtualObstacles() { add_virtual_obstacles_ = true; }
+  void RandomlyAddVirtualObstacles(const int num = 1) {
+    add_num_ = num;
+    add_virtual_obstacles_ = true;
+  }
 
   Eigen::Vector2d GetPoint(const double s);
 
@@ -112,6 +115,7 @@ class NavigationMap {
   std::unique_ptr<RouteSequence> route_sequence_lane_change_ = nullptr;
 
   // maintain position of virtual obstacles
+  int add_num_ = 1;
   bool add_virtual_obstacles_ = false;
   std::vector<Eigen::Vector2d> virtual_obstacles_;
 };

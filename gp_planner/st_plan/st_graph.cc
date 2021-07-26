@@ -8,6 +8,7 @@
 #include <fstream>
 #include <random>
 
+#include "common/frenet/frenet_state.h"
 #include "common/frenet/frenet_transform.h"
 #include "common/smoothing/osqp_spline1d_solver.h"
 #include "common/utils/timer.h"
@@ -20,6 +21,8 @@ namespace planning {
 void StGraph::BuildStGraph(const std::vector<Obstacle>& dynamic_obstacles,
                            const GPPath& gp_path) {
   common::Timer timer;
+
+  max_arc_length_ = gp_path.MaximumArcLength();
 
   int size = dynamic_obstacles.size();
   st_block_segments_.resize(size);
@@ -232,6 +235,154 @@ bool StGraph::SearchWithLocalTruncation(const int k,
   return true;
 }
 
+bool StGraph::GenerateInitialSpeedProfile(const GPPath& gp_path) {
+  TIC;
+  std::vector<double> lbs;
+  std::vector<double> ubs;
+  std::vector<double> refs;
+  double lb, ub;
+  const auto& grid_map = sdf_->occupancy_map();
+  for (const auto& node : st_nodes_) {
+    t_knots_.emplace_back(node.t);
+    grid_map.FindVerticalBoundary(node.t, node.s, &lb, &ub);
+    lbs.emplace_back(lb);
+    ubs.emplace_back(ub);
+    refs.emplace_back(node.s);
+  }
+
+  std::vector<double> t_samples, v_min, v_max, a_max, a_min;
+  for (double t = t_knots_.front() + step_length_; t < t_knots_.back();
+       t += step_length_) {
+    int index = static_cast<int>(t);
+    double delta = t - st_nodes_[index].t;
+    double s = st_nodes_[index].s + st_nodes_[index].v * delta +
+               0.5 * st_nodes_[index + 1].a * delta * delta;
+    double max_abs_v =
+        1.2 * std::sqrt(lat_a_max_ / std::fabs(gp_path.GetCurvature(s)));
+    t_samples.emplace_back(t);
+    // printf("t: %f, delta: %f, s: %f, kappa: %f, max_v: %f\n", t, delta, s,
+    //        gp_path.GetCurvature(s), max_abs_v);
+    v_min.emplace_back(-max_abs_v);
+    v_max.emplace_back(max_abs_v);
+    a_min.emplace_back(a_min_);
+    a_max.emplace_back(a_max_);
+  }
+
+  std::cout << "initial s: " << init_s_ << std::endl;
+  common::OsqpSpline1dSolver solver(t_knots_, 5);
+  auto kernel = solver.mutable_kernel();
+  kernel->AddRegularization(1e-5);
+  kernel->AddSecondOrderDerivativeMatrix(5);
+  kernel->AddThirdOrderDerivativeMatrix(20);
+  kernel->AddReferenceLineKernelMatrix(t_knots_, refs, 20);
+  auto constraint = solver.mutable_constraint();
+  constraint->AddThirdDerivativeSmoothConstraint();
+  constraint->AddPointConstraint(t_knots_.front(), init_s_[0]);
+  constraint->AddPointDerivativeConstraint(t_knots_.front(), init_s_[1]);
+  // constraint->AddPointSecondDerivativeConstraint(t_knots_.front(),
+  // init_s_[2]);
+  constraint->AddBoundary(t_knots_, lbs, ubs);
+  // constraint->AddDerivativeBoundary(t_samples, v_min, v_max);
+  // constraint->AddSecondDerivativeBoundary(t_samples, a_min, a_max);
+
+  if (!solver.Solve()) {
+    LOG(ERROR) << "fail to optimize";
+    return false;
+  }
+
+  st_spline_ = solver.spline();
+  TOC("Initia Speed Profile");
+
+  return true;
+}
+
+bool StGraph::UpdateSpeedProfile(const GPPath& gp_path) {
+  TIC;
+  std::vector<double> lbs;
+  std::vector<double> ubs;
+  std::vector<double> refs;
+  double lb, ub;
+  LOG(INFO) << "?0";
+  const auto& grid_map = sdf_->occupancy_map();
+  for (const auto& node : st_nodes_) {
+    // t_knots_.emplace_back(node.t);
+    grid_map.FindVerticalBoundary(node.t, node.s, &lb, &ub);
+    lbs.emplace_back(lb);
+    ubs.emplace_back(ub);
+    // refs.emplace_back(node.s);
+  }
+  for (const auto& t : t_knots_) {
+    refs.emplace_back(st_spline_(t));
+    // refs.emplace_back(15.0);
+  }
+  LOG(INFO) << "?1";
+
+  std::vector<double> t_samples, v_min, v_max, a_max, a_min;
+  for (double t = t_knots_.front() + 0.1; t < t_knots_.back(); t += 0.1) {
+    double s = st_spline_(t);
+    double max_abs_v =
+        std::sqrt(lat_a_max_ / std::fabs(gp_path.GetCurvature(s))) + 1;
+    t_samples.emplace_back(t);
+    LOG(INFO) << "MAX V" << max_abs_v;
+    v_min.emplace_back(-max_abs_v);
+    v_max.emplace_back(max_abs_v);
+  }
+  LOG(INFO) << "?2";
+
+  common::OsqpSpline1dSolver solver(t_knots_, 5);
+  auto kernel = solver.mutable_kernel();
+  kernel->AddRegularization(1e-5);
+  // kernel->AddSecondOrderDerivativeMatrix(5);
+  kernel->AddThirdOrderDerivativeMatrix(30);
+  kernel->AddReferenceLineKernelMatrix(t_knots_, refs, 10);
+  auto constraint = solver.mutable_constraint();
+  constraint->AddThirdDerivativeSmoothConstraint();
+  constraint->AddPointConstraint(t_knots_.front(), init_s_[0]);
+  constraint->AddPointDerivativeConstraint(t_knots_.front(), init_s_[1]);
+  constraint->AddPointSecondDerivativeConstraint(t_knots_.front(), init_s_[2]);
+  constraint->AddBoundary(t_knots_, lbs, ubs);
+  // constraint->AddDerivativeBoundary(t_samples, v_min, v_max);
+  // constraint->AddSecondDerivativeBoundary(t_samples, a_min, a_max);
+  LOG(INFO) << "?3";
+
+  if (!solver.Solve()) {
+    LOG(ERROR) << "fail to optimize";
+    return false;
+  }
+
+  LOG(INFO) << "?4";
+  st_spline_ = solver.spline();
+  TOC("Initia Speed Profile");
+
+  return true;
+}
+
+void StGraph::GetFrenetState(const double t, Eigen::Vector3d* s) {
+  s->x() = st_spline_(t);
+  s->y() = st_spline_.Derivative(t);
+  s->z() = st_spline_.SecondOrderDerivative(t);
+}
+
+bool StGraph::IsTrajectoryFeasible(const GPPath& gp_path,
+                                   vector_Eigen3d* frenet_s) {
+  LOG(INFO) << "check trajectory";
+  frenet_s->clear();
+  double lat_acc = 0.0;
+  Eigen::Vector3d s, d;
+  for (double t = t_knots_.front() + step_length_; t < t_knots_.back();
+       t += step_length_) {
+    GetFrenetState(t, &s);
+    if (s(0) > max_arc_length_) break;
+    gp_path.GetInterpolateNode(s(0), &d);
+    lat_acc = d(2) * s(1) * s(1) + d(1) * s(2);
+    if (std::fabs(lat_acc) > 1.05 * lat_a_max_) {
+      printf("invalid at %f, acc: %f\n", t, lat_acc);
+      frenet_s->emplace_back(s);
+    }
+  }
+  return frenet_s->empty() ? true : false;
+}
+
 bool StGraph::OptimizeTest() {
   // common::OsqpSpline2dSolver
   TIC;
@@ -251,9 +402,9 @@ bool StGraph::OptimizeTest() {
 
   common::OsqpSpline1dSolver solver(t_knots, 5);
   auto kernel = solver.mutable_kernel();
-  kernel->AddRegularization(1e-5);
-  kernel->AddSecondOrderDerivativeMatrix(5);
-  kernel->AddThirdOrderDerivativeMatrix(20);
+  // kernel->AddRegularization(1e-5);
+  // kernel->AddSecondOrderDerivativeMatrix(5);
+  kernel->AddThirdOrderDerivativeMatrix(1);
   auto constraint = solver.mutable_constraint();
   constraint->AddThirdDerivativeSmoothConstraint();
   const auto& s0 = st_nodes_.front();
@@ -280,18 +431,36 @@ void StGraph::GenerateTrajectory(const ReferenceLine& reference_line,
   trajectory->clear();
   const double t_final = st_nodes_.back().t;
   const double maximum_s = gp_path.MaximumArcLength();
+  LOG(INFO) << "maximum_s: " << maximum_s;
+  LOG(INFO) << "t_final: " << t_final;
   Eigen::Vector3d d;
   common::State state;
   for (double t = 0.0; t <= t_final; t += 0.1) {
     Eigen::Vector3d s(st_spline_(t), st_spline_.Derivative(t),
                       st_spline_.SecondOrderDerivative(t));
+    // if (s[0] < gp_path.start_s()) continue;
     if (s[0] > maximum_s) break;
     gp_path.GetInterpolateNode(s[0], &d);
-    common::FrenetTransfrom::FrenetStateToState(
-        common::FrenetState(s, d), reference_line.GetFrenetReferncePoint(s[0]),
-        &state);
+    auto ref = reference_line.GetFrenetReferncePoint(s[0]);
+    auto ref_point = reference_line.GetFrenetReferncePoint(s[0]);
+    // ref_point.kappa = 0.1;
+    // ref_point.dkappa = 0.0;
+    common::FrenetTransfrom::FrenetStateToState(common::FrenetState(s, d),
+                                                ref_point, &state);
+    state.stamp = t;
     state.frenet_d = d;
+    state.velocity = st_spline_.Derivative(t);
+    // LOG(INFO) << "velocity:" << state.velocity;
+
+    const double one_minus_kappa_rd = 1 - ref.kappa * d[0];
+
+    const double tan_delta_theta = d[1] / one_minus_kappa_rd;
+    const double delta_theta = std::atan2(d[1], one_minus_kappa_rd);
+    const double cos_delta_theta = std::cos(delta_theta);
+    // state.frenet_s[0] = ref.s;
+    // state.frenet_s[1] = s[1] * cos_delta_theta / one_minus_kappa_rd;
     state.frenet_s = s;
+    // LOG(INFO) << state.position.x();
     trajectory->emplace_back(state);
   }
   LOG(WARNING) << "final v: " << trajectory->back().velocity;
@@ -397,10 +566,13 @@ void DotLog(std::ofstream& os, Data&& data, Args&&... args) {
 }
 
 void StGraph::SaveSnapShot(const std::string& path) {
-  std::string br = path + "/block_region.csv";
-  std::string st = path + "/st_node.csv";
+  static int snapshot_count = 0;
+  std::string br =
+      path + "/block_region_" + std::to_string(snapshot_count) + ".csv";
+  std::string st = path + "/st_node_" + std::to_string(snapshot_count) + ".csv";
   std::ofstream os_br = std::ofstream(br, std::ios::trunc);
   std::ofstream os_st = std::ofstream(st, std::ios::trunc);
+  ++snapshot_count;
 
   DotLog(os_br, "x1", "x2", "x3", "x5", "x4", "y1", "y2", "y3", "y4", "y5");
   vector_Eigen<Eigen::Vector2d> corners;
@@ -433,6 +605,7 @@ void StGraph::SaveSnapShot(const std::string& path) {
              node->t - node->parent->t, 0);
     }
   }
+
   const StNode* node = search_tree_.back().front().get();
   while (node->parent) {
     DotLog(os_st, node->parent->s, node->parent->v, node->a, node->parent->t,

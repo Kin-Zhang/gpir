@@ -1,3 +1,5 @@
+# use "rosparam set /use_sim_time true" before replay the bag
+
 rosbag record /tf \
               /tf_static \
               /clock \
@@ -18,4 +20,5 @@ rosbag record /tf \
               /virtual_obstacle \
               /reference_line \
               /gp_path \
-              /behavior_target_lane
+              /behavior_target_lane \
+              /joy

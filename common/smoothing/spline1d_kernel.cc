@@ -118,6 +118,39 @@ bool Spline1dKernel::AddReferenceLineKernelMatrix(
   return true;
 }
 
+bool Spline1dKernel::AddDerivativeReferenceLineKernelMatrix(
+    const std::vector<double>& x_coord, const std::vector<double>& ref_dfx,
+    const double weight) {
+  if (ref_dfx.size() != x_coord.size()) {
+    return false;
+  }
+
+  const uint32_t num_params = spline_order_ + 1;
+  for (size_t i = 0; i < x_coord.size(); ++i) {
+    auto cur_index = FindSegStartIndex(x_coord[i]);
+    double cur_rel_x = x_coord[i] - x_knots_[cur_index];
+    // update offset
+    double x_power = 1.0;
+    Eigen::VectorXd coefficients = Eigen::VectorXd::Zero(6);
+    for (int j = 1; j < 6; ++j) {
+      coefficients(j) = j * x_power;
+      x_power *= cur_rel_x;
+    }
+
+    for (size_t j = 0; j < num_params; ++j) {
+      gradient_(j + cur_index * num_params, 0) -=
+          2.0 * ref_dfx[i] * weight * coefficients(j);
+    }
+    LOG(INFO) << "ref: " << ref_dfx[i];
+    // update kernel matrix
+    Eigen::MatrixXd ref_kernel = 2 * coefficients * coefficients.transpose();
+
+    kernel_matrix_.block(cur_index * num_params, cur_index * num_params,
+                         num_params, num_params) += weight * ref_kernel;
+  }
+  return true;
+}
+
 size_t Spline1dKernel::FindSegStartIndex(const double x) const {
   auto upper_bound = std::upper_bound(x_knots_.begin(), x_knots_.end(), x);
   return std::min<size_t>(upper_bound - x_knots_.begin() - 1,

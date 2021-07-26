@@ -68,7 +68,8 @@ bool GPPathOptimizer::GenerateGPPath(
 
       graph_.add(GPPriorFactor(last_key, key, delta_s, kQc));
 
-      if (current_s > 20) {
+      // LOG(INFO) << "init v: " << initial_state.s[1];
+      if (current_s > initial_state.s[1] * 3) {
         graph_.add(PriorFactor3(key, x_ref, pose_fix_cost3));
       }
       graph_.add(
@@ -176,8 +177,8 @@ bool GPPathOptimizer::GenerateGPPath(
   // }
 
   // sdf_->mutable_occupancy_map()->PolyLine(points);
-  // cv::imshow("path", sdf_->occupancy_map().BinaryImage());
-  // cv::waitKey(50);
+  cv::imshow("path", sdf_->occupancy_map().BinaryImage());
+  cv::waitKey(50);
   return true;
 }
 
@@ -248,7 +249,8 @@ bool GPPathOptimizer::DecideInitialPathBoundary(
       if (width < ego_width_ * 2) {
         expansion->cost += weight_width * (ego_width_ * 2 - width);
       }
-      // printf("(%d, %d), width: %f, cost: %f, angle diff: %f\n", current_idx + 1,
+      // printf("(%d, %d), width: %f, cost: %f, angle diff: %f\n", current_idx +
+      // 1,
       //        j, width, expansion->cost,
       //        NormalizeAngle(expansion->angle - candidate->angle));
       bfs_queue.push(std::move(expansion));

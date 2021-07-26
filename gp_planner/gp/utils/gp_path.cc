@@ -2,6 +2,7 @@
 
 #include "gp_planner/gp/utils/gp_path.h"
 
+#include "gtsam/nonlinear/Symbol.h"
 #include "planning_core/planning_common/vehicle_info.h"
 
 namespace planning {
@@ -24,16 +25,49 @@ void GPPath::GetState(const double s, common::State* state) const {
   state->debug = d;
 }
 
+double GPPath::GetCurvature(const double s) const {
+  double kappa_r, dkappa_r;
+  reference_line_->GetCurvature(s, &kappa_r, &dkappa_r);
+  Eigen::Vector3d node;
+  GetInterpolateNode(s, &node);
+  const double one_minus_kappa_rd = 1 - kappa_r * node(0);
+  const double one_minus_kappa_rd_inv = 1.0 / one_minus_kappa_rd;
+  const double theta = std::atan2(node(1), one_minus_kappa_rd);
+
+  const double tan_theta = node(1) / one_minus_kappa_rd;
+  const double sin_theta = std::sin(theta);
+  const double cos_theta = std::cos(theta);
+  const double cos_theta_sqr = cos_theta * cos_theta;
+
+  const double kappa =
+      ((node(2) - (dkappa_r * node(0) + kappa_r * node(1)) * tan_theta) *
+           cos_theta_sqr * one_minus_kappa_rd_inv +
+       kappa_r) *
+      cos_theta * one_minus_kappa_rd_inv;
+  return kappa;
+}
+
+void GPPath::GetInterpolateNode(const double s, Eigen::Vector3d* node) const {
+  int index = std::max(
+      std::min(static_cast<int>((s - start_s_) / delta_s_), num_nodes_ - 2), 0);
+  interpolator_.Interpolate(nodes_[index], nodes_[index + 1],
+                            s - start_s_ - index * delta_s_, node);
+}
+
 bool GPPath::HasOverlapWith(const common::State& state, const double length,
                             const double width, double* s_l,
                             double* s_u) const {
+  static const VehicleParam& ego_param =
+      VehicleInfo::Instance().vehicle_param();
+  static double ego_half_length = ego_param.length / 2;
+
   double inital_s = reference_line_->GetArcLength(state.position);
 
   common::State ego_state;
   GetState(inital_s, &ego_state);
   common::Box2D ego_box;
   GetEgoBox(ego_state, &ego_box);
-  common::Box2D obs_box(state.position, length, width, state.heading);
+  common::Box2D obs_box(state.position, length, width * 1.2, state.heading);
 
   if (!ego_box.HasOverlapWith(obs_box)) {
     *s_l = 0.0;
@@ -58,8 +92,8 @@ bool GPPath::HasOverlapWith(const common::State& state, const double length,
     backward_s -= kStepLength;
   }
 
-  *s_l = backward_s + kStepLength / 2.0;
-  *s_u = forward_s - kStepLength / 2.0;
+  *s_l = backward_s + kStepLength / 2.0;  // - length / 2.0 - ego_half_length;
+  *s_u = forward_s - kStepLength / 2.0;   //+ length / 2.0 + ego_half_length;
 
   return true;
 }
@@ -72,6 +106,22 @@ void GPPath::GetEgoBox(const common::State& ego_state,
       ego_state.position + Eigen::Vector2d(std::cos(ego_state.heading),
                                            std::sin(ego_state.heading)) *
                                ego_param.rear_axle_to_center,
-      ego_param.length, ego_param.width, ego_state.heading);
+      ego_param.length, ego_param.width * 1.2, ego_state.heading);
+}
+
+void GPPath::UpdateNodes(const gtsam::Values& values) {
+  for (int i = 0; i < nodes_.size(); ++i) {
+    nodes_[i] = values.at<gtsam::Vector3>(gtsam::Symbol('x', i));
+  }
+}
+
+void GPPath::GetSamplePathPoints(const double delta_s,
+                                 std::vector<common::State>* samples) {
+  if (!samples->empty()) samples->clear();
+  common::State state;
+  for (double s = start_s_; s <= end_s_; s += delta_s) {
+    GetState(s, &state);
+    samples->emplace_back(state);
+  }
 }
 }  // namespace planning

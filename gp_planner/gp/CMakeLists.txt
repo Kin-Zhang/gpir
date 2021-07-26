@@ -5,12 +5,14 @@ target_sources(gp_planner_gp
   PRIVATE
     factors/gp_prior_factor.cc
     factors/gp_obstacle_factor.cc
-    factors/gp_interpolate_obstacle_factor.cc
     factors/gp_kappa_limit_factor.cc
+    factors/gp_lat_acc_limit_factor.cc
+    factors/gp_interpolate_obstacle_factor.cc
     factors/gp_interpolate_kappa_limit_factor.cc
     utils/gp_utils.cc
     utils/gp_path.cc
     gp_path_optimizer.cc
+    gp_incremental_path_planner.cc
 )
 
 target_link_libraries(gp_planner_gp PUBLIC
