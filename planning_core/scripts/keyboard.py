@@ -19,7 +19,7 @@ class AgentGenerator:
         self.tm = self.client.get_trafficmanager(args.tm_port)
         self.tm.set_global_distance_to_leading_vehicle(1.0)
         self.tm.set_hybrid_physics_mode(args.hybrid)
-        # self.tm.global_percentage_speed_difference(-110.0)
+        # self.tm.global_percentage_speed_difference(-50.0)
         self.tm.set_random_device_seed(1)
 
         blueprints = self.world.get_blueprint_library().filter(args.filterv)
@@ -32,14 +32,16 @@ class AgentGenerator:
         blueprints = [x for x in blueprints if not x.id.endswith("t2")]
         self.blueprints = blueprints
         self.agent_list = []
-        self.minimum_distance = 8
+        self.minimum_distance = 15
         self.spawn_offset = {
-            "front": 8,
-            "front_left": 5,
-            "back_left": -5,
-            "front_right": 5,
-            "back_right": -5,
-            "back": -8,
+            "front": 15,
+            "front_left": 10,
+            "back_left": -10,
+            "front_right": 10,
+            "back_right": -10,
+            "back": -15,
+            "double_left": 0,
+            "double_right": 0,
         }
         self.autopilot_enabled = False
 
@@ -104,6 +106,14 @@ class AgentGenerator:
             spawn_point = ego_waypoint.get_right_lane()
             if spawn_point:
                 spawn_point = self.get_nearby_waypoint(spawn_point, offset)
+        elif location == "double_left":
+            spawn_point = ego_waypoint.get_left_lane().get_left_lane()
+            if spawn_point:
+                spawn_point = self.get_nearby_waypoint(spawn_point, given_offset)
+        elif location == "double_right":
+            spawn_point = ego_waypoint.get_right_lane().get_lane()
+            if spawn_point:
+                spawn_point = self.get_nearby_waypoint(spawn_point, given_offset)
 
         if not spawn_point:
             print("can't find spawn location at ego's {}".format(location))
@@ -203,7 +213,23 @@ class KeyboardHandler:
                     self.publish_joy(joy)
                 elif event.key == pg.K_t:
                     print("{}: Save snapshot of s-t graph".format(self.cmd_count))
-                    joy.buttons[6] = 1
+                    joy.buttons[5] = 1
+                    self.publish_joy(joy)
+                elif event.key == pg.K_1:
+                    print("add 1 obstacle")
+                    joy.buttons[5] = 1
+                    self.publish_joy(joy)
+                elif event.key == pg.K_2:
+                    print("add 2 obstacle")
+                    joy.buttons[5] = 2
+                    self.publish_joy(joy)
+                elif event.key == pg.K_3:
+                    print("add 3 obstacle")
+                    joy.buttons[5] = 3
+                    self.publish_joy(joy)
+                elif event.key == pg.K_4:
+                    print("add 4 obstacle")
+                    joy.buttons[5] = 4
                     self.publish_joy(joy)
                 elif event.key == pg.K_i:
                     print("Add agent in the front of ego")
@@ -227,15 +253,15 @@ class KeyboardHandler:
                     print("Trigger agents' autopilot")
                     self.publish_ego_start_cmd()
                     self.agent_generator.trigger_autopilot()
-                elif event.key == pg.K_1:
-                    print("Merging scenario")
-                    actor1 = self.agent_generator.spawn_agent_at("front", 10)
-                    actor2 = self.agent_generator.spawn_agent_at("front_left", 5)
-                    actor3 = self.agent_generator.spawn_agent_at("back_left", -5)
-                    self.agent_generator.set_speed_percentage_difference(actor1, -150.0)
-                    self.agent_generator.set_speed_percentage_difference(actor2, -150.0)
-                    self.agent_generator.set_speed_percentage_difference(actor3, -150.0)
-                elif event.key == pg.K_2:
+                # elif event.key == pg.K_1:
+                #     print("Merging scenario")
+                #     actor1 = self.agent_generator.spawn_agent_at("front", 10)
+                #     actor2 = self.agent_generator.spawn_agent_at("front_left", 5)
+                #     actor3 = self.agent_generator.spawn_agent_at("back_left", -5)
+                #     self.agent_generator.set_speed_percentage_difference(actor1, -150.0)
+                #     self.agent_generator.set_speed_percentage_difference(actor2, -150.0)
+                #     self.agent_generator.set_speed_percentage_difference(actor3, -150.0)
+                elif event.key == pg.K_q:
                     print("obstacle avoidance experiment")
                     # actor1 = self.agent_generator.spawn_agent_at("front_left", 0)
                     # actor1 = self.agent_generator.spawn_agent_at("front_left", 8)
@@ -249,27 +275,50 @@ class KeyboardHandler:
                     # actor3 = self.agent_generator.spawn_agent_at("front_right", 40)
                     self.agent_generator.set_auto_lane_change(False)
                     self.agent_generator.set_ignore_light_percentage(100.0)
-                elif event.key == pg.K_3:
-                    print("obstacle avoidance experiment")
-                    # actor1 = self.agent_generator.spawn_agent_at("front_left", 0)
-                    # actor1 = self.agent_generator.spawn_agent_at("front_left", 8)
-                    # actor2 = self.agent_generator.spawn_agent_at("front_left", 16)
-                    actor1 = self.agent_generator.spawn_agent_at("front", 60)
-                    self.agent_generator.set_speed_percentage_difference(actor1, -100.0)
-                    # actor2 = self.agent_generator.spawn_agent_at("front_left", 32)
-                    actor2 = self.agent_generator.spawn_agent_at("front_left", 20)
-                    self.agent_generator.set_speed_percentage_difference(actor2, -150.0)
-                    actor3 = self.agent_generator.spawn_agent_at("back_left", -20)
-                    # self.agent_generator.set_speed_percentage_difference(actor3, -130.0)
-                    actor4 = self.agent_generator.spawn_agent_at("front_right", 0)
-                    self.agent_generator.set_speed_percentage_difference(actor4, -135.0)
-                    # actor3 = self.agent_generator.spawn_agent_at("front_right", 32)
+                # elif event.key == pg.K_3:
+                #     # print("obstacle avoidance experiment")
+                #     # # actor1 = self.agent_generator.spawn_agent_at("front_left", 0)
+                #     # # actor1 = self.agent_generator.spawn_agent_at("front_left", 8)
+                #     # # actor2 = self.agent_generator.spawn_agent_at("front_left", 16)
+                #     # actor1 = self.agent_generator.spawn_agent_at("front", 60)
+                #     # self.agent_generator.set_speed_percentage_difference(actor1, -50.0)
+                #     # # actor2 = self.agent_generator.spawn_agent_at("front_left", 32)
+                #     # actor2 = self.agent_generator.spawn_agent_at("front_left", 12)
+                #     # self.agent_generator.set_speed_percentage_difference(actor2, -120.0)
+                #     # actor3 = self.agent_generator.spawn_agent_at("back_left", -12)
+                #     # self.agent_generator.set_speed_percentage_difference(actor3, -120.0)
+                #     # actor4 = self.agent_generator.spawn_agent_at("front_right", 14)
+                #     # self.agent_generator.set_speed_percentage_difference(actor4, -100.0)
+                #     # # actor3 = self.agent_generator.spawn_agent_at("front_right", 32)
+                #     # # actor3 = self.agent_generator.spawn_agent_at("front_right", 40)
+                #     self.agent_generator.set_auto_lane_change(False)
+                #     self.agent_generator.set_ignore_light_percentage(100.0)
+                elif event.key == pg.K_y:
+                    # print("obstacle avoidance experiment")
+                    actor1 = self.agent_generator.spawn_agent_at("front", 10)
+                    actor1 = self.agent_generator.spawn_agent_at("front", 35)
+                    actor1 = self.agent_generator.spawn_agent_at("front_left", 50)
+                    actor1 = self.agent_generator.spawn_agent_at("back_left", -15)
+                    actor2 = self.agent_generator.spawn_agent_at("front_left", 100)
+                    actor2 = self.agent_generator.spawn_agent_at("double_left", 30)
+                    actor2 = self.agent_generator.spawn_agent_at("double_left", 60)
+                    actor3 = self.agent_generator.spawn_agent_at("front_right", 5)
                     # actor3 = self.agent_generator.spawn_agent_at("front_right", 40)
+                    actor3 = self.agent_generator.spawn_agent_at("front_right", 70)
+                    # self.agent_generator.set_speed_percentage_difference(actor1, -50.0)
+                    # # actor2 = self.agent_generator.spawn_agent_at("front_left", 32)
+                    # actor2 = self.agent_generator.spawn_agent_at("front_left", 12)
+                    # self.agent_generator.set_speed_percentage_difference(actor2, -120.0)
+                    # actor3 = self.agent_generator.spawn_agent_at("back_left", -12)
+                    # self.agent_generator.set_speed_percentage_difference(actor3, -120.0)
+                    # actor4 = self.agent_generator.spawn_agent_at("front_right", 14)
+                    # self.agent_generator.set_speed_percentage_difference(actor4, -100.0)
+                    # # actor3 = self.agent_generator.spawn_agent_at("front_right", 40)
                     self.agent_generator.set_auto_lane_change(False)
                     self.agent_generator.set_ignore_light_percentage(100.0)
 
     def destroy(self):
-        # self.agent_generator.destory()
+        self.agent_generator.destory()
         pass
 
 

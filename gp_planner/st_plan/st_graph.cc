@@ -232,10 +232,6 @@ bool StGraph::SearchWithLocalTruncation(const int k,
   // std::reverse(result->begin(), result->end());
   std::reverse(st_nodes_.begin(), st_nodes_.end());
 
-  for (const auto& node : st_nodes_) {
-    LOG(INFO) << "node v: " << node.v << "node a: " << node.a;
-  }
-
   return true;
 }
 
@@ -306,45 +302,55 @@ bool StGraph::UpdateSpeedProfile(const GPPath& gp_path) {
   std::vector<double> ubs;
   std::vector<double> refs;
   double lb, ub;
+  LOG(INFO) << "?0";
   const auto& grid_map = sdf_->occupancy_map();
   for (const auto& node : st_nodes_) {
-    t_knots_.emplace_back(node.t);
+    // t_knots_.emplace_back(node.t);
     grid_map.FindVerticalBoundary(node.t, node.s, &lb, &ub);
     lbs.emplace_back(lb);
     ubs.emplace_back(ub);
-    refs.emplace_back(node.s);
+    // refs.emplace_back(node.s);
   }
+  for (const auto& t : t_knots_) {
+    refs.emplace_back(st_spline_(t));
+    // refs.emplace_back(15.0);
+  }
+  LOG(INFO) << "?1";
 
   std::vector<double> t_samples, v_min, v_max, a_max, a_min;
-  for (double t = t_knots_.front() + 0.5; t < t_knots_.back(); t += 0.5) {
+  for (double t = t_knots_.front() + 0.1; t < t_knots_.back(); t += 0.1) {
     double s = st_spline_(t);
     double max_abs_v =
-        1.2 * std::sqrt(lat_a_max_ / std::fabs(gp_path.GetCurvature(s)));
+        std::sqrt(lat_a_max_ / std::fabs(gp_path.GetCurvature(s))) + 1;
     t_samples.emplace_back(t);
+    LOG(INFO) << "MAX V" << max_abs_v;
     v_min.emplace_back(-max_abs_v);
     v_max.emplace_back(max_abs_v);
   }
+  LOG(INFO) << "?2";
 
   common::OsqpSpline1dSolver solver(t_knots_, 5);
   auto kernel = solver.mutable_kernel();
   kernel->AddRegularization(1e-5);
-  kernel->AddSecondOrderDerivativeMatrix(5);
-  kernel->AddThirdOrderDerivativeMatrix(20);
-  kernel->AddReferenceLineKernelMatrix(t_knots_, refs, 20);
+  // kernel->AddSecondOrderDerivativeMatrix(5);
+  kernel->AddThirdOrderDerivativeMatrix(30);
+  kernel->AddReferenceLineKernelMatrix(t_knots_, refs, 10);
   auto constraint = solver.mutable_constraint();
   constraint->AddThirdDerivativeSmoothConstraint();
   constraint->AddPointConstraint(t_knots_.front(), init_s_[0]);
   constraint->AddPointDerivativeConstraint(t_knots_.front(), init_s_[1]);
   constraint->AddPointSecondDerivativeConstraint(t_knots_.front(), init_s_[2]);
   constraint->AddBoundary(t_knots_, lbs, ubs);
-  constraint->AddDerivativeBoundary(t_samples, v_min, v_max);
+  // constraint->AddDerivativeBoundary(t_samples, v_min, v_max);
   // constraint->AddSecondDerivativeBoundary(t_samples, a_min, a_max);
+  LOG(INFO) << "?3";
 
   if (!solver.Solve()) {
     LOG(ERROR) << "fail to optimize";
     return false;
   }
 
+  LOG(INFO) << "?4";
   st_spline_ = solver.spline();
   TOC("Initia Speed Profile");
 
@@ -369,7 +375,7 @@ bool StGraph::IsTrajectoryFeasible(const GPPath& gp_path,
     if (s(0) > max_arc_length_) break;
     gp_path.GetInterpolateNode(s(0), &d);
     lat_acc = d(2) * s(1) * s(1) + d(1) * s(2);
-    if (std::fabs(lat_acc) > lat_a_max_) {
+    if (std::fabs(lat_acc) > 1.05 * lat_a_max_) {
       printf("invalid at %f, acc: %f\n", t, lat_acc);
       frenet_s->emplace_back(s);
     }
@@ -432,16 +438,19 @@ void StGraph::GenerateTrajectory(const ReferenceLine& reference_line,
   for (double t = 0.0; t <= t_final; t += 0.1) {
     Eigen::Vector3d s(st_spline_(t), st_spline_.Derivative(t),
                       st_spline_.SecondOrderDerivative(t));
+    // if (s[0] < gp_path.start_s()) continue;
     if (s[0] > maximum_s) break;
     gp_path.GetInterpolateNode(s[0], &d);
     auto ref = reference_line.GetFrenetReferncePoint(s[0]);
-    common::FrenetTransfrom::FrenetStateToState(
-        common::FrenetState(s, d), reference_line.GetFrenetReferncePoint(s[0]),
-        &state);
+    auto ref_point = reference_line.GetFrenetReferncePoint(s[0]);
+    // ref_point.kappa = 0.1;
+    // ref_point.dkappa = 0.0;
+    common::FrenetTransfrom::FrenetStateToState(common::FrenetState(s, d),
+                                                ref_point, &state);
     state.stamp = t;
     state.frenet_d = d;
     state.velocity = st_spline_.Derivative(t);
-    LOG(INFO) << "velocity:" << state.velocity;
+    // LOG(INFO) << "velocity:" << state.velocity;
 
     const double one_minus_kappa_rd = 1 - ref.kappa * d[0];
 

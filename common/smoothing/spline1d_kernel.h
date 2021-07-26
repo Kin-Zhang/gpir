@@ -31,6 +31,10 @@ class Spline1dKernel {
                                     const std::vector<double>& ref_fx,
                                     const double weight);
 
+  bool AddDerivativeReferenceLineKernelMatrix(
+      const std::vector<double>& x_coord, const std::vector<double>& ref_dfx,
+      const double weight);
+
   const Eigen::MatrixXd& kernel_matrix() const;
   const Eigen::MatrixXd& gradient() const;
 

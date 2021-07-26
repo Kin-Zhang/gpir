@@ -2,6 +2,9 @@
 
 #include <std_msgs/Bool.h>
 
+#include <fstream>
+#include <memory>
+
 #include "gp_planner/sdf/signed_distance_field_2d.h"
 #include "planning_core/planner/planner.h"
 #include "planning_core/planning_common/vehicle_info.h"
@@ -11,12 +14,12 @@ namespace planning {
 class GPPlanner : public Planner {
  public:
   GPPlanner() = default;
-  virtual ~GPPlanner() = default;
+  virtual ~GPPlanner() { recorder_->close(); }
 
   void Init() override;
   void PlanOnce(NavigationMap* navigation_map_) override;
 
-  void LogDebugInfo() override { save_snapshot_ = true; }
+  void LogDebugInfo() override {}  // save_snapshot_ = true; }
 
  protected:
   bool PlanWithGPIR(const common::State& ego_state,
@@ -49,6 +52,8 @@ class GPPlanner : public Planner {
   common::Box2D ego_box_;
   VehicleParam vehicle_param_;
 
+  int trajectory_index_ = 0;
+
   int max_iter = 5;
   double reference_speed_ = 0.0;
   const double lateral_critical_thereshold_ = 6;
@@ -56,9 +61,19 @@ class GPPlanner : public Planner {
   std::vector<Obstacle> static_obstacles_;
   std::vector<Obstacle> dynamic_obstacles_;
 
-  bool save_snapshot_ = true;
+  bool save_snapshot_ = false;
 
   hdmap::LaneSegmentBehavior last_behavior_ = hdmap::LaneSegmentBehavior::kKeep;
+
+  // debug
+  std::unique_ptr<std::ofstream> recorder_;
+  struct TimeConsumption {
+    double sdf = 0.0;
+    double init_path = 0.0;
+    double init_st = 0.0;
+    double refinement = 0.0;
+  };
+  TimeConsumption time_consuption_;
 };
 
 }  // namespace planning

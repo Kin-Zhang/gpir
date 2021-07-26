@@ -1,5 +1,6 @@
 /* Copyright 2021 Unity-Drive Inc. All rights reserved */
 
+#include "common/utils/io_utils.h"
 #include "gp_planner/gp/gp_incremental_path_planner.h"
 #include "gp_planner/gp/gp_path_optimizer.h"
 #include "gp_planner/gp/utils/bounded_penalty_function.h"
@@ -65,9 +66,9 @@ int main(int argc, char const* argv[]) {
   // GPPathOptimizer path_planner(sdf);
 
   common::State initial_state;
-  initial_state.position = Eigen::Vector2d(10.0, -5);
+  initial_state.position = Eigen::Vector2d(10.0, -3.5);
   initial_state.heading = 0.0;
-  initial_state.velocity = 15.0;
+  initial_state.velocity = 17.5;
   initial_state.acceleration = 0.0;
   initial_state.stamp = 0.0;
 
@@ -91,7 +92,7 @@ int main(int argc, char const* argv[]) {
   st_graph.SetInitialState(Eigen::Vector3d(initial_state.position.x(),
                                            initial_state.velocity,
                                            initial_state.acceleration));
-  st_graph.SetReferenceSpeed(10);
+  st_graph.SetReferenceSpeed(17.5);
   st_graph.BuildStGraph(dynamic_obstacle, gp_path);
   std::vector<StNode> st_nodes;
   st_graph.SearchWithLocalTruncation(13, &st_nodes);
@@ -101,38 +102,58 @@ int main(int argc, char const* argv[]) {
   }
   // st_graph.VisualizeStGraph();
 
+  std::string file_path =
+      "/home/udi/research/gpir_ws/src/gpir/gp_planner/data/"
+      "incremental_data.csv";
+  std::ofstream writer = std::ofstream(file_path, std::ios::trunc);
+
+  common::DotLog(writer, "iteration", "t", "x", "y", "v", "lat_a", "lat_v", "k",
+                 "s", "nan");
   for (int i = 0; i < 5; ++i) {
     common::Trajectory traj;
     st_graph.GenerateTrajectory(reference_line, gp_path, &traj);
 
     // recording
     std::string index = std::to_string(i);
-    std::vector<double> t1, x1, y1, v1, lat_a1, lat_v1, k1;
+    std::vector<double> t1, x1, y1, v1, lat_a1, lat_v1, k1, s;
     for (const auto& p : traj) {
       t1.emplace_back(p.stamp);
       x1.emplace_back(p.position.x());
       y1.emplace_back(p.position.y());
+      v1.emplace_back(p.velocity);
+      s.emplace_back(p.frenet_s[0]);
       lat_a1.emplace_back(p.frenet_d[2] * p.frenet_s[1] * p.frenet_s[1] +
                           p.frenet_d[1] * p.frenet_s[2]);
       lat_v1.emplace_back(p.frenet_d[1] * p.frenet_s[1]);
       k1.emplace_back(p.kappa);
+      common::DotLog(writer, i, t1.back(), x1.back(), y1.back(), v1.back(),
+                     lat_a1.back(), lat_v1.back(), k1.back(), s.back());
     }
-    plt::subplot(3, 1, 1);
+    plt::subplot(4, 1, 1);
     plt::named_plot(index, x1, y1);
     plt::legend();
     plt::axis("equal");
-    plt::subplot(3, 1, 2);
+    plt::subplot(4, 1, 2);
     plt::named_plot(index, t1, lat_a1);
     plt::legend();
-    plt::subplot(3, 1, 3);
-    plt::named_plot(index, t1, k1);
+    plt::subplot(4, 1, 3);
+    plt::named_plot(index, t1, lat_v1);
+    plt::subplot(4, 1, 4);
+    plt::named_plot(index, t1, v1);
     plt::legend();
 
     vector_Eigen3d frenet_s;
     if (!st_graph.IsTrajectoryFeasible(gp_path, &frenet_s)) {
-      path_planner.UpdateGPPath(reference_line, frenet_s, &gp_path);
+      LOG(INFO) << "WTF";
+      path_planner.UpdateGPPathNonIncremental(reference_line, frenet_s, &gp_path);
+      LOG(INFO) << "WTF2";
+      // st_graph.UpdateSpeedProfile(gp_path);
     }
   }
+  writer.close();
+  // plt::subplot(3, 1, 2);
+  // plt::plot(std::vector<double>{0, 6}, std::vector<double>{4.0, 4.0});
+  // plt::plot(std::vector<double>{0, 6}, std::vector<double>{-4.0, -4.0});
 
   // common::Trajectory traj;
   // st_graph.GenerateTrajectory(reference_line, gp_path, &traj);

@@ -274,11 +274,13 @@ void NavigationMap::UpdateVirtualObstacles() {
     // double obs_d = (RandomDouble(-1, 1) >= 0 ? 1 : -1) *
     // RandomDouble(1.0, 1.5);
     double obs_s = proj.s + 50;
-    double obs_d = sign * 1.0;
+    double obs_d = sign * 0.6;
     sign = -sign;
     Eigen::Vector2d obs_pos;
-    target_lane.FrenetToCartesion(obs_s, obs_d, &obs_pos);
-    virtual_obstacles_.emplace_back(obs_pos);
+    for (int i = 0; i < add_num_; ++i) {
+      target_lane.FrenetToCartesion(obs_s + 1.5 * i, obs_d, &obs_pos);
+      virtual_obstacles_.emplace_back(obs_pos);
+    }
     add_virtual_obstacles_ = false;
   }
   PublishVirtualObstacles();

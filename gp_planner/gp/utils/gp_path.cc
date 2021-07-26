@@ -92,8 +92,8 @@ bool GPPath::HasOverlapWith(const common::State& state, const double length,
     backward_s -= kStepLength;
   }
 
-  *s_l = backward_s + kStepLength / 2.0;// - length / 2.0 - ego_half_length;
-  *s_u = forward_s - kStepLength / 2.0;// + length / 2.0 + ego_half_length;
+  *s_l = backward_s + kStepLength / 2.0;  // - length / 2.0 - ego_half_length;
+  *s_u = forward_s - kStepLength / 2.0;   //+ length / 2.0 + ego_half_length;
 
   return true;
 }
@@ -112,6 +112,16 @@ void GPPath::GetEgoBox(const common::State& ego_state,
 void GPPath::UpdateNodes(const gtsam::Values& values) {
   for (int i = 0; i < nodes_.size(); ++i) {
     nodes_[i] = values.at<gtsam::Vector3>(gtsam::Symbol('x', i));
+  }
+}
+
+void GPPath::GetSamplePathPoints(const double delta_s,
+                                 std::vector<common::State>* samples) {
+  if (!samples->empty()) samples->clear();
+  common::State state;
+  for (double s = start_s_; s <= end_s_; s += delta_s) {
+    GetState(s, &state);
+    samples->emplace_back(state);
   }
 }
 }  // namespace planning

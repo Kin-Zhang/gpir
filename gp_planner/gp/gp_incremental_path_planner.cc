@@ -25,7 +25,7 @@ using gtsam::noiseModel::Diagonal;
 using gtsam::noiseModel::Isotropic;
 using PriorFactor3 = gtsam::PriorFactor<Vector3>;
 
-constexpr double kEpsilon = 1.8;
+constexpr double kEpsilon = 1.6;
 constexpr double kQc = 0.1;
 
 bool GPIncrementalPathPlanner::DecideInitialPathBoundary(
@@ -58,7 +58,7 @@ bool GPIncrementalPathPlanner::DecideInitialPathBoundary(
 
   constexpr double weight_width = 0.4;
   constexpr double weight_dis = 0.0;
-  constexpr double weight_angle = 1.0;
+  constexpr double weight_angle = 0.0;
 
   // use BFS to find best initial path topology
   std::queue<std::unique_ptr<PathCandidate>> bfs_queue;
@@ -132,13 +132,15 @@ bool GPIncrementalPathPlanner::GenerateInitialGPPath(
     const std::vector<double>& obstacle_location_hint, GPPath* gp_path) {
   TIC;
   static auto sigma_initial = Isotropic::Sigma(3, 0.001);
-  // static auto sigma_goal = Isotropic::Sigma(3, 0.001);
   static auto sigma_goal = Diagonal::Sigmas(Vector3(1, 0.1, 0.1));
   static auto sigma_reference = Diagonal::Sigmas(Vector3(30, 1e9, 1e9));
 
   interval_ = length / (num_of_nodes_ - 1);
 
-  if (!graph_.empty()) graph_.resize(0);
+  if (!graph_.empty()) {
+    graph_.resize(0);
+    node_locations_.clear();
+  }
 
   Vector3 x0 = initial_state.d;
   Vector3 xn(0, 0, 0);
@@ -146,8 +148,8 @@ bool GPIncrementalPathPlanner::GenerateInitialGPPath(
 
   double start_s = initial_state.s[0];
 
-  const int collision_check_num = 10;
-  const double tau = interval_ / (collision_check_num + 1);
+  const int interpolate_num = 10;
+  const double tau = interval_ / (interpolate_num + 1);
 
   graph_.reserve(num_of_nodes_);
   double kappa_r = 0.0, dkappa_r = 0.0, current_s = 0.0;
@@ -164,21 +166,149 @@ bool GPIncrementalPathPlanner::GenerateInitialGPPath(
 
       graph_.add(GPPriorFactor(last_key, key, interval_, kQc));
 
-      if (current_s > initial_state.s[1] * 3) {
+      if (current_s > 0) {
         graph_.add(PriorFactor3(key, x_ref, sigma_reference));
       }
+      // if (current_s > initial_state.s[1] * 3) {
+      //   graph_.add(PriorFactor3(key, x_ref, sigma_reference));
+      // }
       graph_.add(
-          GPObstacleFactor(key, sdf_, 0.01, kEpsilon, current_s, kappa_r));
-      graph_.add(GPKappaLimitFactor(key, 0.01, kappa_r, dkappa_r, kappa_limit_,
-                                    current_s));
+          GPObstacleFactor(key, sdf_, 0.1, kEpsilon, current_s, kappa_r));
+      if (enable_curvature_constraint_) {
+        graph_.add(GPKappaLimitFactor(key, 0.01, kappa_r, dkappa_r,
+                                      kappa_limit_, current_s));
+      }
 
-      for (int j = 0; j < collision_check_num; ++j) {
+      for (int j = 0; j < interpolate_num; ++j) {
         graph_.add(GPInterpolateObstacleFactor(
-            last_key, key, sdf_, 0.01, kEpsilon, start_s + interval_ * (i - 1),
+            last_key, key, sdf_, 0.1, kEpsilon, start_s + interval_ * (i - 1),
             kQc, interval_, tau * (j + 1), kappa_r));
-        graph_.add(GPInterpolateKappaLimitFactor(
-            last_key, key, 0.01, kQc, interval_, tau * (j + 1), kappa_r,
-            dkappa_r, kappa_limit_));
+        if (enable_curvature_constraint_) {
+          graph_.add(GPInterpolateKappaLimitFactor(
+              last_key, key, 0.01, kQc, interval_, tau * (j + 1), kappa_r,
+              dkappa_r, kappa_limit_));
+        }
+      }
+    }
+  }
+
+  std::vector<double> lb, ub;
+  double init_kappa = reference_line.GetCurvature(initial_state.s[0]);
+  double init_angle =
+      std::atan2(initial_state.d[1], 1 - init_kappa * initial_state.d[0]);
+  std::vector<std::vector<std::pair<double, double>>> boundaries;
+  sdf_->mutable_occupancy_map()->SearchForVerticalBoundaries(
+      obstacle_location_hint, &boundaries);
+  DecideInitialPathBoundary(
+      Eigen::Vector2d(initial_state.s[0], initial_state.d[0]), init_angle,
+      obstacle_location_hint, boundaries, &lb, &ub);
+
+  GPInitializer initializer;
+  vector_Eigen3d initial_path;
+
+  if (!initializer.GenerateInitialPath(x0, xn, node_locations_,
+                                       obstacle_location_hint, lb, ub,
+                                       &initial_path)) {
+    LOG(ERROR) << "Generate initial path for GP planner failed";
+    return false;
+  }
+
+  gtsam::Values init_values;
+  for (int i = 0; i < node_locations_.size(); ++i) {
+    gtsam::Key key = gtsam::symbol('x', i);
+    init_values.insert<gtsam::Vector3>(key, initial_path[i]);
+  }
+
+  gtsam::LevenbergMarquardtParams param;
+  param.setlambdaInitial(100.0);
+  param.setMaxIterations(50);
+  // param.setAbsoluteErrorTol(5e-4);
+  // param.setRelativeErrorTol(0.01);
+  // param.setErrorTol(1.0);
+  // param.setVerbosity("ERROR");
+  // param.se
+
+  gtsam::LevenbergMarquardtOptimizer opt(graph_, init_values, param);
+  map_result_ = opt.optimize();
+
+  *gp_path =
+      GPPath(num_of_nodes_, start_s, interval_, length, kQc, &reference_line);
+  auto gp_path_nodes = gp_path->mutable_nodes();
+  for (size_t i = 0; i < map_result_.size(); ++i) {
+    gp_path_nodes->emplace_back(
+        map_result_.at<gtsam::Vector3>(gtsam::Symbol('x', i)));
+  }
+  TOC("GP path Generation");
+
+  if (enable_incremental_refinemnt_) {
+    // init isam2
+    isam2_ = gtsam::ISAM2(
+        gtsam::ISAM2Params(gtsam::ISAM2GaussNewtonParams(), 1e-3, 1));
+    isam2_.update(graph_, map_result_);
+    // map_result_ = isam2_.calculateEstimate();
+  }
+
+  return true;
+}
+
+bool GPIncrementalPathPlanner::TmpTest(
+    const ReferenceLine& reference_line,
+    const common::FrenetState& initial_state, const double length,
+    const std::vector<double>& obstacle_location_hint, GPPath* gp_path) {
+  TIC;
+  auto sigma_initial = Isotropic::Sigma(3, 0.001);
+  // static auto sigma_goal = Isotropic::Sigma(3, 0.001);
+  auto sigma_goal = Diagonal::Sigmas(Vector3(1, 0.1, 0.1));
+  auto sigma_reference = Diagonal::Sigmas(Vector3(30, 1e9, 1e9));
+
+  interval_ = length / (num_of_nodes_ - 1);
+
+  if (!graph_.empty()) graph_.resize(0);
+
+  Vector3 x0 = initial_state.d;
+  Vector3 xn(0, 0, 0);
+  Vector3 x_ref(0, 0, 0);
+
+  double start_s = initial_state.s[0];
+
+  const int interpolate_num = 10;
+  const double tau = interval_ / (interpolate_num + 1);
+
+  graph_.reserve(num_of_nodes_);
+  double kappa_r = 0.0, dkappa_r = 0.0, current_s = 0.0;
+  for (int i = 0; i < num_of_nodes_; ++i) {
+    current_s = start_s + i * interval_;
+    // node_locations_.emplace_back(current_s);
+
+    gtsam::Key key = gtsam::Symbol('x', i);
+    if (i == 0) graph_.add(PriorFactor3(key, x0, sigma_initial));
+    if (i == num_of_nodes_ - 1) graph_.add(PriorFactor3(key, xn, sigma_goal));
+    if (i > 0) {
+      gtsam::Key last_key = gtsam::Symbol('x', i - 1);
+      reference_line.GetCurvature(current_s, &kappa_r, &dkappa_r);
+      // kappa_r = 0.2, dkappa_r = 0;
+
+      graph_.add(GPPriorFactor(last_key, key, interval_, kQc));
+
+      if (current_s > 0) {
+        graph_.add(PriorFactor3(key, x_ref, sigma_reference));
+      }
+      // if (current_s > initial_state.s[1] * 3) {
+      //   graph_.add(PriorFactor3(key, x_ref, sigma_reference));
+      // }
+      graph_.add(
+          GPObstacleFactor(key, sdf_, 0.1, kEpsilon, current_s, kappa_r));
+      // graph_.add(GPKappaLimitFactor(key, 0.01, kappa_r, dkappa_r,
+      // kappa_limit_,
+      //                               current_s));
+
+      for (int j = 0; j < interpolate_num; ++j) {
+        graph_.add(GPInterpolateObstacleFactor(
+            last_key, key, sdf_, 0.1, kEpsilon, start_s + interval_ * (i - 1),
+            kQc, interval_, tau * (j + 1), kappa_r));
+        // graph_.add(GPInterpolateKappaLimitFactor(
+        //     last_key, key, 0.01, kQc, interval_, tau * (j + 1), kappa_r,
+        //     dkappa_r, kappa_limit_));
         // graph_.add(GPLatAccLimitFactor(last_key, key, kQc, interval_,
         //                                tau * (j + 1), 15, 0, 4.0, 0.1));
       }
@@ -215,7 +345,7 @@ bool GPIncrementalPathPlanner::GenerateInitialGPPath(
   gtsam::LevenbergMarquardtParams param;
   param.setlambdaInitial(100.0);
   param.setAbsoluteErrorTol(1e-5);
-  // param.setVerbosity("ERROR");
+  param.setVerbosity("ERROR");
   // param.se
 
   gtsam::LevenbergMarquardtOptimizer opt(graph_, init_values, param);
@@ -228,11 +358,11 @@ bool GPIncrementalPathPlanner::GenerateInitialGPPath(
     gp_path_nodes->emplace_back(
         map_result_.at<gtsam::Vector3>(gtsam::Symbol('x', i)));
   }
-  TOC("GP path Generation");
+  TOC("Temp GP path Generation");
   // init isam2
-  isam2_ = gtsam::ISAM2(
-      gtsam::ISAM2Params(gtsam::ISAM2GaussNewtonParams(), 1e-3, 1));
-  isam2_.update(graph_, map_result_);
+  // isam2_ = gtsam::ISAM2(
+  //     gtsam::ISAM2Params(gtsam::ISAM2GaussNewtonParams(), 1e-3, 1));
+  // isam2_.update(graph_, map_result_);
   // map_result_ = isam2_.calculateEstimate();
 
   return true;
@@ -245,16 +375,44 @@ bool GPIncrementalPathPlanner::UpdateGPPath(const ReferenceLine& reference_line,
   for (int i = 0; i < frenet_s.size(); ++i) {
     int index =
         std::floor((frenet_s[i](0) - node_locations_.front()) / interval_);
+    if (index < 0) continue;
     printf("%d: s: %f, index: %d\n", i, frenet_s[i](0), index);
     gtsam::Symbol begin_node('x', index), end_node('x', index + 1);
     graph_.add(GPLatAccLimitFactor(begin_node, end_node, kQc, interval_,
                                    frenet_s[i](0) - node_locations_[index],
-                                   frenet_s[i](1), frenet_s[i](2), 4.0, 0.1));
+                                   frenet_s[i](1), frenet_s[i](2), 2.5, 0.1));
   }
   isam2_.update(graph_);
   map_result_ = isam2_.calculateEstimate();
   gp_path->UpdateNodes(map_result_);
   TOC("Update GP path");
+  return true;
+}
+
+bool GPIncrementalPathPlanner::UpdateGPPathNonIncremental(
+    const ReferenceLine& reference_line, const vector_Eigen3d& frenet_s,
+    GPPath* gp_path) {
+  TIC;
+  for (int i = 0; i < frenet_s.size(); ++i) {
+    int index =
+        std::floor((frenet_s[i](0) - node_locations_.front()) / interval_);
+    if (index < 0) continue;
+    printf("%d: s: %f, index: %d\n", i, frenet_s[i](0), index);
+    gtsam::Symbol begin_node('x', index), end_node('x', index + 1);
+    graph_.add(GPLatAccLimitFactor(begin_node, end_node, kQc, interval_,
+                                   frenet_s[i](0) - node_locations_[index],
+                                   frenet_s[i](1), frenet_s[i](2), 2.5, 0.1));
+  }
+
+  gtsam::LevenbergMarquardtParams param;
+  param.setlambdaInitial(100.0);
+  param.setAbsoluteErrorTol(1e-5);
+  // param.setVerbosity("ERROR");
+  gtsam::LevenbergMarquardtOptimizer opt(graph_, map_result_, param);
+
+  map_result_ = opt.optimize();
+  gp_path->UpdateNodes(map_result_);
+  TOC("Non incremental");
   return true;
 }
 
