@@ -1,0 +1,3 @@
+add_subdirectory(DL_IAPS)
+
+add_benchmark(curvature_benchmark)

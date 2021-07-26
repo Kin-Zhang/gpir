@@ -1,3 +1,5 @@
+# use "rosparam set /use_sim_time true" before replay the bag
+
 rosbag record /tf \
               /tf_static \
               /clock \

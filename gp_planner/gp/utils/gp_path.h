@@ -28,6 +28,9 @@ class GPPath {
 
   void UpdateNodes(const gtsam::Values& values);
 
+  void GetSamplePathPoints(const double delta_s,
+                           std::vector<common::State>* samples);
+
   inline double MaximumArcLength() const { return end_s_; }
   inline double start_s() const { return start_s_; }
   inline vector_Eigen<Eigen::Vector3d>* mutable_nodes() { return &nodes_; }

@@ -1,7 +1,7 @@
 <launch>
 
 <arg name="map_path" default="$(find hdmap)/maps/"/>
-<arg name="town" default="Town05"/>
+<arg name="town" default="Town06"/>
 <arg name="simulator" default="Carla"/>
 
 <env name="LD_LIBRARY_PATH" value="$(env LD_LIBRARY_PATH):/$(find gp_planner)/thirdparty/gtsam-4.1rc/install/lib"/>
@@ -12,7 +12,7 @@
   <param name="random_drive_mode" value="true"/>
 </node>
 
-<node pkg="planning_core" name="carla_controller" type="carla_controller" output="screen">
+<node pkg="planning_core" name="carla_controller" type="carla_controller" >
   <param name="kp" value="3.5"/>
   <param name="ki" value="0.15"/>
   <param name="kd" value="0.4"/>

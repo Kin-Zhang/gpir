@@ -23,10 +23,26 @@ class GPIncrementalPathPlanner {
                              const std::vector<double>& obstacle_location_hint,
                              GPPath* gp_path);
 
+  bool TmpTest(const ReferenceLine& reference_line,
+               const common::FrenetState& initial_state, const double length,
+               const std::vector<double>& obstacle_location_hint,
+               GPPath* gp_path);
+
   bool UpdateGPPath(const ReferenceLine& reference_line,
                     const vector_Eigen3d& frenet_s, GPPath* gp_path);
 
-  void set_sdf(std::shared_ptr<SignedDistanceField2D> sdf) { sdf_ = sdf; }
+  bool UpdateGPPathNonIncremental(const ReferenceLine& reference_line,
+                    const vector_Eigen3d& frenet_s, GPPath* gp_path);
+
+  inline void set_sdf(std::shared_ptr<SignedDistanceField2D> sdf) {
+    sdf_ = sdf;
+  }
+  inline void set_enable_curvature_constraint(const bool option) {
+    enable_curvature_constraint_ = option;
+  }
+  inline void set_enable_incremental_refinement(const bool option) {
+    enable_incremental_refinemnt_ = option;
+  }
 
  protected:
   bool DecideInitialPathBoundary(
@@ -49,5 +65,9 @@ class GPIncrementalPathPlanner {
   double interval_ = 0.0;
   std::vector<double> node_locations_;
   std::shared_ptr<SignedDistanceField2D> sdf_;
+
+  // options
+  bool enable_curvature_constraint_ = true;
+  bool enable_incremental_refinemnt_ = true;
 };
 }  // namespace planning

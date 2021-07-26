@@ -232,10 +232,6 @@ bool StGraph::SearchWithLocalTruncation(const int k,
   // std::reverse(result->begin(), result->end());
   std::reverse(st_nodes_.begin(), st_nodes_.end());
 
-  for (const auto& node : st_nodes_) {
-    LOG(INFO) << "node v: " << node.v << "node a: " << node.a;
-  }
-
   return true;
 }
 
@@ -345,7 +341,7 @@ bool StGraph::UpdateSpeedProfile(const GPPath& gp_path) {
   constraint->AddPointDerivativeConstraint(t_knots_.front(), init_s_[1]);
   constraint->AddPointSecondDerivativeConstraint(t_knots_.front(), init_s_[2]);
   constraint->AddBoundary(t_knots_, lbs, ubs);
-  constraint->AddDerivativeBoundary(t_samples, v_min, v_max);
+  // constraint->AddDerivativeBoundary(t_samples, v_min, v_max);
   // constraint->AddSecondDerivativeBoundary(t_samples, a_min, a_max);
   LOG(INFO) << "?3";
 
@@ -379,7 +375,7 @@ bool StGraph::IsTrajectoryFeasible(const GPPath& gp_path,
     if (s(0) > max_arc_length_) break;
     gp_path.GetInterpolateNode(s(0), &d);
     lat_acc = d(2) * s(1) * s(1) + d(1) * s(2);
-    if (std::fabs(lat_acc) > lat_a_max_) {
+    if (std::fabs(lat_acc) > 1.05 * lat_a_max_) {
       printf("invalid at %f, acc: %f\n", t, lat_acc);
       frenet_s->emplace_back(s);
     }
@@ -439,15 +435,18 @@ void StGraph::GenerateTrajectory(const ReferenceLine& reference_line,
   LOG(INFO) << "t_final: " << t_final;
   Eigen::Vector3d d;
   common::State state;
-  for (double t = 0.0; t <= t_final; t += 0.02) {
+  for (double t = 0.0; t <= t_final; t += 0.1) {
     Eigen::Vector3d s(st_spline_(t), st_spline_.Derivative(t),
                       st_spline_.SecondOrderDerivative(t));
+    // if (s[0] < gp_path.start_s()) continue;
     if (s[0] > maximum_s) break;
     gp_path.GetInterpolateNode(s[0], &d);
     auto ref = reference_line.GetFrenetReferncePoint(s[0]);
-    common::FrenetTransfrom::FrenetStateToState(
-        common::FrenetState(s, d), reference_line.GetFrenetReferncePoint(s[0]),
-        &state);
+    auto ref_point = reference_line.GetFrenetReferncePoint(s[0]);
+    // ref_point.kappa = 0.1;
+    // ref_point.dkappa = 0.0;
+    common::FrenetTransfrom::FrenetStateToState(common::FrenetState(s, d),
+                                                ref_point, &state);
     state.stamp = t;
     state.frenet_d = d;
     state.velocity = st_spline_.Derivative(t);

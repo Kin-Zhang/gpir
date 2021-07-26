@@ -5,6 +5,7 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /Global Options1
+        - /HDmap1
         - /HDmap1/pcd1
       Splitter Ratio: 0.6064140200614929
     Tree Height: 727
@@ -69,7 +70,7 @@ Visualization Manager:
           Marker Topic: /hdmap
           Name: hdmap
           Namespaces:
-            "": true
+            {}
           Queue Size: 100
           Value: true
         - Alpha: 0.4000000059604645
@@ -196,6 +197,14 @@ Visualization Manager:
           Value: true
       Enabled: true
       Name: Ego
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Marker Topic: /hdmap1
+      Name: hdmap1
+      Namespaces:
+        "": true
+      Queue Size: 100
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 255; 255; 255
@@ -221,7 +230,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/ThirdPersonFollower
-      Distance: 19.73822784423828
+      Distance: 41.776912689208984
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -236,10 +245,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.3003983795642853
+      Pitch: 0.33039847016334534
       Target Frame: ego_vehicle2d
       Value: ThirdPersonFollower (rviz)
-      Yaw: 3.195399522781372
+      Yaw: 3.1054000854492188
     Saved: ~
 Window Geometry:
   Displays:

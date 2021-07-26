@@ -78,7 +78,7 @@ class StGraph {
 
   std::vector<StNode> st_nodes_;
 
-  const double step_length_ = 0.05;
+  const double step_length_ = 0.2;
   std::vector<double> t_knots_;
   common::Spline1d st_spline_;
 };

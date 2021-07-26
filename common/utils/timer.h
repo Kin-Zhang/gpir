@@ -17,7 +17,8 @@ class Timer {
 
   inline void Start();
   inline void Reset();
-  inline double End();  // in millseconds
+  inline double End();           // in millseconds
+  inline double EndThenReset();  // in millseconds
   inline void End(const std::string& description);
 
   inline void set_timeout(const double timeout_ms) { timeout_ = timeout_ms; }
@@ -36,6 +37,16 @@ inline double Timer::End() {
   using namespace std::chrono;
   auto end_time = high_resolution_clock::now();
   return duration_cast<nanoseconds>(end_time - start_time_).count() / 1e6;
+}
+
+inline double Timer::EndThenReset() {
+  using namespace std::chrono;
+  double duration =
+      duration_cast<nanoseconds>(high_resolution_clock::now() - start_time_)
+          .count() /
+      1e6;
+  Start();
+  return duration;
 }
 
 inline void Timer::End(const std::string& description) {

@@ -51,7 +51,7 @@ bool HdMapImpl::LoadMap(const std::string& file, const std::string& pcd_file) {
 void HdMapImpl::InitRos() {
   ros::NodeHandle node;
   hdmap_pub_ =
-      node.advertise<visualization_msgs::MarkerArray>("hdmap", 10, true);
+      node.advertise<visualization_msgs::MarkerArray>("hdmap1", 10, true);
   hdmap_topo_pub_ =
       node.advertise<visualization_msgs::MarkerArray>("hdmap_topo", 1, true);
   pointcloud_pub_ =

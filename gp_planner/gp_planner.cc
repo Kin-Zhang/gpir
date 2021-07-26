@@ -8,6 +8,7 @@
 
 #include "common/smoothing/osqp_spline2d_solver.h"
 #include "common/utils/color_map.h"
+#include "common/utils/io_utils.h"
 #include "gp_planner/gp/gp_incremental_path_planner.h"
 #include "gp_planner/gp/gp_path_optimizer.h"
 #include "gp_planner/st_plan/st_graph.h"
@@ -25,6 +26,13 @@ void GPPlanner::Init() {
       "/behavior_target_lane", 1);
 
   vehicle_param_ = VehicleInfo::Instance().vehicle_param();
+
+  recorder_ = std::make_unique<std::ofstream>(
+      "/home/udi/research/gpir_ws/src/gpir/gp_planner/data/"
+      "computation_time.csv",
+      std::ios::trunc);
+
+  // common::DotLog(*recorder_, "sdf", "init_path", "init_st", "refinement");
 }
 
 // void GPPlanner::PlanOnce(NavigationMap* navigation_map_) {
@@ -126,8 +134,10 @@ void GPPlanner::PlanOnce(NavigationMap* navigation_map_) {
   std::vector<std::pair<hdmap::LaneSegmentBehavior, common::Trajectory>>
       trajectory_candidate;
 
+  int count = 0;
   for (const auto& reference_line : reference_lines) {
     TIC;
+    trajectory_index_ = count;
     common::Trajectory trajectroy;
     if (!PlanWithGPIR(ego_state, reference_line, obstacles, virtual_obstacles,
                       navigation_map_->trajectory(), &trajectroy)) {
@@ -136,7 +146,13 @@ void GPPlanner::PlanOnce(NavigationMap* navigation_map_) {
     } else {
       trajectory_candidate.emplace_back(
           std::make_pair(reference_line.behavior(), trajectroy));
+      // if (count == 0) {
+      //   common::DotLog(*recorder_, time_consuption_.sdf,
+      //                  time_consuption_.init_path, time_consuption_.init_st,
+      //                  time_consuption_.refinement);
+      // }
     }
+    ++count;
     TOC("GPIR");
   }
 
@@ -197,11 +213,15 @@ bool GPPlanner::PlanWithGPIR(
     const std::vector<Obstacle>& dynamic_agents,
     const std::vector<Eigen::Vector2d>& virtual_obstacles,
     const common::Trajectory& last_trajectory, common::Trajectory* trajectory) {
+  common::Timer timer;
+  time_consuption_ = TimeConsumption();
+
   const double length = reference_line.length();
 
   std::vector<Obstacle> cirtical_agents;
   ProcessObstacles(dynamic_agents, reference_line, &cirtical_agents);
 
+  timer.Start();
   OccupancyMap occupancy_map({0, -5}, {std::ceil(length / 0.1) + 100, 100},
                              {0.1, 0.1});
 
@@ -213,6 +233,7 @@ bool GPPlanner::PlanWithGPIR(
   }
   auto sdf = std::make_shared<SignedDistanceField2D>(std::move(occupancy_map));
   sdf->UpdateSDF();
+  time_consuption_.sdf = timer.EndThenReset();
 
   common::FrenetState frenet_state;
   reference_line.ToFrenetState(ego_state, &frenet_state);
@@ -233,6 +254,7 @@ bool GPPlanner::PlanWithGPIR(
     LOG(ERROR) << "[GPPlanner]: fail to generate initla path";
     return false;
   }
+  time_consuption_.init_path = timer.EndThenReset();
 
   reference_line.ToFrenetState(ego_state, &frenet_state);
   StGraph st_graph(frenet_state.s);
@@ -247,6 +269,7 @@ bool GPPlanner::PlanWithGPIR(
     LOG(ERROR) << "[StGraph]: fail to optimize inital speed profile";
     return false;
   }
+  time_consuption_.init_st = timer.EndThenReset();
 
   if (save_snapshot_) {
     st_graph.SaveSnapShot(
@@ -256,14 +279,21 @@ bool GPPlanner::PlanWithGPIR(
 
   int iter_count = 0;
   vector_Eigen3d invalid_lat_frenet_s;
-  while (!st_graph.IsTrajectoryFeasible(gp_path, &invalid_lat_frenet_s)) {
+  while (trajectory_index_ < 1 &&
+         !st_graph.IsTrajectoryFeasible(gp_path, &invalid_lat_frenet_s)) {
     gp_path_planner.UpdateGPPath(reference_line, invalid_lat_frenet_s,
                                  &gp_path);
+    // gp_path_planner.UpdateGPPathNonIncremental(reference_line,
+    //                                            invalid_lat_frenet_s,
+    //                                            &gp_path);
     // st_graph.UpdateSpeedProfile(gp_path);
     if (iter_count++ == max_iter) {
       LOG(WARNING) << "[GPIR]: reach maximum iterations";
       break;
     }
+  }
+  if (iter_count != 0) {
+    time_consuption_.refinement = timer.EndThenReset();
   }
   LOG(INFO) << "[GPIR]: takes " << iter_count << " iterations";
   st_graph.GenerateTrajectory(reference_line, gp_path, trajectory);
