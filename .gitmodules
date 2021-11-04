@@ -1,0 +1,4 @@
+[submodule "ros-bridge"]
+	url = https://github.com/carla-simulator/ros-bridge.git
+[submodule "gp_planner/thirdparty/matplotlib-cpp"]
+	url = https://github.com/lava/matplotlib-cpp.git

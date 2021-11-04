@@ -40,6 +40,7 @@ target_link_libraries(planning_core INTERFACE
   planning_core::common
   planning_core::mock_predictor
   planning_core::simulation
+  glog::glog
 )
 
 add_executable(planning
@@ -59,4 +60,5 @@ target_link_libraries(eigen_test
   common
   gp_planner
   planning_core::controller
+  glog::glog
 )
