@@ -236,19 +236,19 @@ class KeyboardHandler:
                     print("Add agent in the front of ego")
                     self.agent_generator.spawn_agent_at("front")
                 elif event.key == pg.K_k:
-                    print("Add agent in the front of ego")
+                    print("Add agent in the back of ego")
                     self.agent_generator.spawn_agent_at("back")
                 elif event.key == pg.K_u:
-                    print("Add agent in the front of ego")
+                    print("Add agent in the front left of ego")
                     self.agent_generator.spawn_agent_at("front_left")
                 elif event.key == pg.K_j:
-                    print("Add agent in the front of ego")
+                    print("Add agent in the back left of ego")
                     self.agent_generator.spawn_agent_at("back_left")
                 elif event.key == pg.K_o:
-                    print("Add agent in the front of ego")
+                    print("Add agent in the front right of ego")
                     self.agent_generator.spawn_agent_at("front_right")
                 elif event.key == pg.K_l:
-                    print("Add agent in the left of ego")
+                    print("Add agent in the back right of ego")
                     self.agent_generator.spawn_agent_at("back_right")
                 elif event.key == pg.K_b:
                     print("Trigger agents' autopilot")
