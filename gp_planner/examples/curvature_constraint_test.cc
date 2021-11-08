@@ -122,7 +122,7 @@ int main(int argc, char const* argv[]) {
   // st_graph.VisualizeStGraph();
 
   // std::string file_path =
-  //     "/home/udi/research/gpir_ws/src/gpir/gp_planner/data/"
+  //     "/home/udi/research/gpir_ws/src/gpir_dev/gp_planner/data/"
   //     "incremental_data.csv";
   // std::ofstream writer = std::ofstream(file_path, std::ios::trunc);
 

@@ -32,7 +32,7 @@ find_package(catkin REQUIRED COMPONENTS
 )
 
 include_directories(SYSTEM ${EIGEN3_INCLUDE_DIR})
-include_directories(${CMAKE_SOURCE_DIR}/gpir)
+include_directories(${CMAKE_SOURCE_DIR}/gpir_dev)
 
 add_subdirectory(utils)
 add_subdirectory(spline)
