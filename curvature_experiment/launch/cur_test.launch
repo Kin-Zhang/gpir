@@ -1,0 +1,7 @@
+<launch>
+
+<node pkg="curvature_experiment" name="curvature_experiment" type="curvature_experiment" output="screen">
+  <param name="target_planner" value="GPCur"/>
+</node>
+
+</launch>

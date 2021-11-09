@@ -1,0 +1,6 @@
+<launch>
+
+<arg name="rvizconfig" default="$(find curvature_experiment)/default.rviz"/>
+<node name="planning_rviz" pkg="rviz" type="rviz" args="-d $(arg rvizconfig)" required="false" />
+
+</launch>
