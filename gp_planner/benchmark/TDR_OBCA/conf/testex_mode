@@ -1,0 +1,7 @@
+distance_approach_mode: DISTANCE_APPROACH_IPOPT
+[TDR_OBCA PLAN SUCCESS] takes 2442.617087 ms
+
+distance_approach_mode: DISTANCE_APPROACH_IPOPT_RELAX_END
+[TDR_OBCA PLAN SUCCESS] takes 2443.707832 ms
+
+

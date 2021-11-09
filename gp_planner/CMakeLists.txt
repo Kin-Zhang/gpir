@@ -32,7 +32,7 @@ include_directories(SYSTEM
   ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS}
 )
 include_directories(
-  ${CMAKE_SOURCE_DIR}/gpir
+  ${CMAKE_SOURCE_DIR}/gpir_dev
   ${CMAKE_BINARY_DIR}/gpir
   "./thirdparty/traj_min_jerk"
 )

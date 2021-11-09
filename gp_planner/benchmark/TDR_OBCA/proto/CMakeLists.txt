@@ -21,7 +21,7 @@ list(APPEND PROTOC_FLAGS "--${GEN_LANG}_out=${CMAKE_BINARY_DIR}")
 
 list(APPEND proto_files 
   # main-module configs
-  "gpir_dev/gp_planner/benchmark/DL_IAPS/proto/pnc_point.proto"
+  "gpir_dev/gp_planner/benchmark/TDR_OBCA/proto/planner_open_space_config.proto"
 )
 
 # Absolute paths of .proto files to be passed to protoc program
@@ -60,7 +60,7 @@ add_custom_command(
   COMMENT "Generating proto messages for planning module ..."
 )
 
-add_library(benchmark_proto ${ProtoHeaders} ${ProtoSources})
-add_library(benchmark::proto ALIAS benchmark_proto)
-target_include_directories(benchmark_proto PUBLIC $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}>)
-target_link_libraries(benchmark_proto protobuf)
+add_library(benchmark_proto_tdr_obca ${ProtoHeaders} ${ProtoSources})
+add_library(benchmark::proto_tdr_obca ALIAS benchmark_proto_tdr_obca)
+target_include_directories(benchmark_proto_tdr_obca PUBLIC $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}>)
+target_link_libraries(benchmark_proto_tdr_obca protobuf)
