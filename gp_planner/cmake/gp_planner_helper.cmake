@@ -8,7 +8,7 @@ function(add_example name)
     gp_planner::initializer
     gp_planner::st_plan
     common::utils
-    Python2::Python Python2::NumPy
+    Python3::Python Python3::NumPy
   ) 
 endfunction()
 
@@ -23,6 +23,6 @@ function(add_benchmark name)
     gp_planner::st_plan
     benchmark::dl_iaps
     common::utils
-    Python2::Python Python2::NumPy
+    Python3::Python Python3::NumPy
   ) 
 endfunction()
