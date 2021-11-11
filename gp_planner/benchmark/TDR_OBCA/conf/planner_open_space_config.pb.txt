@@ -116,7 +116,7 @@ iterative_anchoring_smoother_config {
      weight_fem_pos_deviation: 1e8
      weight_path_length: 1.0
      weight_ref_deviation: 1e3
-     apply_curvature_constraint: false
+     apply_curvature_constraint: true
      weight_curvature_constraint_slack_var: 1e8
      curvature_constraint: 0.2
      max_iter: 500

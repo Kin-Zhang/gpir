@@ -50,7 +50,7 @@ class FemPosDeviationSmoother {
 
   bool Solve(const std::vector<std::pair<double, double>>& raw_point2d,
              const std::vector<double>& bounds, std::vector<double>* opt_x,
-             std::vector<double>* opt_y);
+             std::vector<double>* opt_y, const double curvature_limit = 0.2);
 
   bool SqpWithOsqp(const std::vector<std::pair<double, double>>& raw_point2d,
                    const std::vector<double>& bounds,
@@ -61,6 +61,7 @@ class FemPosDeviationSmoother {
                     std::vector<double>* opt_x, std::vector<double>* opt_y);
 
  private:
+  double curvature_limit_ = 0.2;
   // FemPosDeviationSmootherConfig config_;
 };
 }  // namespace planning

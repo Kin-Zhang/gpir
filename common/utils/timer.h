@@ -51,8 +51,8 @@ inline double Timer::EndThenReset() {
 
 inline void Timer::End(const std::string& description) {
   double t = End();
-  fprintf(stdout, "%s[%s]%s takes %f ms\n", ANSI_BLUE, description.c_str(),
-          ANSI_RESET, t);
+  // fprintf(stdout, "%s[%s]%s takes %f ms\n", ANSI_BLUE, description.c_str(),
+  //         ANSI_RESET, t);
 }
 
 #define TIC ::common::Timer timer

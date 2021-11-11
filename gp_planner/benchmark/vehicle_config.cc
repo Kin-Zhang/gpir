@@ -4,8 +4,8 @@
 
 const bool BenchmarkMehtodConfig::use_dual_variable_warm_start = true;
 const std::string BenchmarkMehtodConfig::tdr_obca_config_path =
-    "/home/udi/WorkSpace/GITHUB/gpir_ws/src/gpir_dev/gp_planner/benchmark/"
-    "TDR_OBCA/conf/planner_open_space_config.pb.txt";
+    "/home/cj/research/gpir_ws/src/gpir/gp_planner/benchmark/TDR_OBCA/conf/"
+    "planner_open_space_config.pb.txt";
 
 const double BenchmarkVehicleConfig::max_steer_angle = 31.;
 const double BenchmarkVehicleConfig::steer_ratio = 57.3;

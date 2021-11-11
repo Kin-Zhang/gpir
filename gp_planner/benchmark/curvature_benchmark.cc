@@ -23,14 +23,15 @@ namespace plt = matplotlibcpp;
 using apollo::common::math::Vec2d;
 
 std::string save_path =
-    "/home/udi/research/gpir_ws/src/gpir_dev/gp_planner/data/"
-    "curvature_benchmark.csv";
+    "/home/cj/research/gpir_ws/src/gpir/gp_planner/data/"
+    "curvature_benchmark-1.csv";
 std::ofstream logger;
 
 void LogPathData(std::string planner, const std::vector<double>& x,
                  const std::vector<double>& y, const std::vector<double>& s,
                  const std::vector<double>& k) {
-  for (int i = 0; i < x.size(); ++i) {
+  for (int i = 0; i < k.size(); ++i) {
+    std::cout << "?" << std::endl;
     common::DotLog(logger, planner, x[i], y[i], s[i], k[i]);
   }
 }
@@ -103,6 +104,7 @@ int main(int argc, char const* argv[]) {
       44.5, -7.5, 50, -7.5, 50, 3,   44.5, 3,    //
       60,   -2,   65, -2,   65, 7.5, 60,   7.5,  //
   };
+  LOG(INFO) << "11";
 
   for (const auto obstacle : obstacles) {
     occupancy_map.FillConvexPoly(obstacle);
@@ -112,16 +114,21 @@ int main(int argc, char const* argv[]) {
       vertex_x.emplace_back(p.x());
       vertex_y.emplace_back(p.y());
     }
+
+    LOG(INFO) << "15";
     plt::subplot(2, 1, 1);
+    LOG(INFO) << "16";
     plt::plot(vertex_x, vertex_y);
   }
 
+  LOG(INFO) << "14";
   auto sdf = std::make_shared<SignedDistanceField2D>(std::move(occupancy_map));
-  cv::imshow("SDF-Rviz", sdf->occupancy_map().BinaryImage());
-  cv::waitKey(0);
+  // cv::imshow("SDF-Rviz", sdf->occupancy_map().BinaryImage());
+  // cv::waitKey(0);
   sdf->UpdateSDF();
 
   std::vector<double> hint{32.5, 47.5, 62.5};
+  LOG(INFO) << "13";
 
   common::State initial_state;
   initial_state.position = Eigen::Vector2d(20.0, 0);
@@ -133,6 +140,7 @@ int main(int argc, char const* argv[]) {
   common::FrenetState frenet_state;
   reference_line.ToFrenetState(initial_state, &frenet_state);
 
+  LOG(INFO) << "11";
   // method GPNoCur
   GPPath path_without_curvature_constraint;
   GPIncrementalPathPlanner path_planner(sdf);
@@ -149,6 +157,7 @@ int main(int argc, char const* argv[]) {
   std::vector<common::State> samples;
   path_without_curvature_constraint.GetSamplePathPoints(0.2, &samples);
 
+  LOG(INFO) << "12";
   std::vector<double> x, y, k, s;
   Eigen::MatrixXd xWs(3, samples.size());
   for (int i = 0; i < samples.size(); ++i) {
@@ -169,7 +178,7 @@ int main(int argc, char const* argv[]) {
         std::atan(BenchmarkVehicleConfig::wheelbase * samples[i].kappa));
     initial_guess_obca.accumulated_s.emplace_back(samples[i].s);
   }
-  LogPathData("GPNoCur", x, y, s, k);
+  // LogPathData("GPNoCur", x, y, s, k);
 
   plt::subplot(2, 1, 1);
   plt::named_plot("G3P", x, y);
@@ -206,7 +215,7 @@ int main(int argc, char const* argv[]) {
   }
   DiscretePointsMath::ComputePathProfile(discrete_points, &headings, &s, &k,
                                          &dkappa);
-  LogPathData("DLIAPS", x, y, s, k);
+  // LogPathData("DLIAPS", x, y, s, k);
 
   plt::subplot(2, 1, 1);
   plt::named_plot("DL-IAPS", x, y);
@@ -231,8 +240,8 @@ int main(int argc, char const* argv[]) {
     s.emplace_back(samples[i].s);
     k.emplace_back(samples[i].kappa);
   }
-  LogPathData("GPCur", x, y, s, k);
-  logger.close();
+  // LogPathData("GPCur", x, y, s, k);
+  // logger.close();
 
   plt::subplot(2, 1, 1);
   plt::named_plot("G3P-Cur", x, y);
@@ -259,6 +268,10 @@ int main(int argc, char const* argv[]) {
   TDROBCAPlanner::DistanceGetResult(&tdr_obca_result, &obs_container, &opt_x,
                                     &opt_y, &opt_phi, &opt_v, &opt_a,
                                     &opt_steer, &opt_kappa);
+
+  std::cout << opt_x.size() << "," << opt_kappa.size() << std::endl;
+  LogPathData("TDROBCA", opt_x, opt_y, opt_x, opt_kappa);
+  logger.close();
 
   plt::subplot(2, 1, 1);
   plt::named_plot("TDR-OBCA", opt_x, opt_y);

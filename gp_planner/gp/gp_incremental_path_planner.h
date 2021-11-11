@@ -61,7 +61,7 @@ class GPIncrementalPathPlanner {
   int num_of_nodes_ = 21;
   double ego_width_ = 2.1;
   double ego_half_width_ = 1.0;
-  const double kappa_limit_ = 0.35;
+  const double kappa_limit_ = 0.2;
   double interval_ = 0.0;
   std::vector<double> node_locations_;
   std::shared_ptr<SignedDistanceField2D> sdf_;

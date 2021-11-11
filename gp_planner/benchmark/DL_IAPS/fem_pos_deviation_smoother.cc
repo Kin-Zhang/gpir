@@ -32,8 +32,9 @@ FemPosDeviationSmoother::FemPosDeviationSmoother() {}
 bool FemPosDeviationSmoother::Solve(
     const std::vector<std::pair<double, double>>& raw_point2d,
     const std::vector<double>& bounds, std::vector<double>* opt_x,
-    std::vector<double>* opt_y) {
+    std::vector<double>* opt_y, const double curvature_limit) {
   // return SqpWithOsqp(raw_point2d, bounds, opt_x, opt_y);
+  curvature_limit_ = curvature_limit;
   return NlpWithIpopt(raw_point2d, bounds, opt_x, opt_y);
 }
 
@@ -53,7 +54,8 @@ bool FemPosDeviationSmoother::SqpWithOsqp(
   solver.set_weight_ref_deviation(1e3);
   solver.set_weight_curvature_constraint_slack_var(1e8);
 
-  solver.set_curvature_constraint(0.2);
+  solver.set_curvature_constraint(
+      curvature_limit_);  // change curvature constraint here
 
   solver.set_sqp_sub_max_iter(100);
   solver.set_sqp_ftol(1e-4);
@@ -101,7 +103,8 @@ bool FemPosDeviationSmoother::NlpWithIpopt(
   smoother->set_weight_path_length(0.0);
   smoother->set_weight_ref_deviation(1e3);
   smoother->set_weight_curvature_constraint_slack_var(1e8);
-  smoother->set_curvature_constraint(0.2);
+  smoother->set_curvature_constraint(
+      curvature_limit_);  // change curvature constraint here
 
   Ipopt::SmartPtr<Ipopt::TNLP> problem = smoother;
 

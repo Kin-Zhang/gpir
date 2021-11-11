@@ -174,7 +174,7 @@ void ObstacleContainer::AddObstacle(
         HPresentationObstacle())) {
     std::cout << "obstacle presentation fails;  \n ";
   } else {
-    std::cout << "[ObstacleContainer]: add obstacle successfully. \n";
+    // std::cout << "[ObstacleContainer]: add obstacle successfully. \n";
   }
   TOC("ObstacleContainer::AddObs");
 }
@@ -362,7 +362,7 @@ bool TDROBCAPlanner::DistancePlan(HybridAStartResult* hybrid_astar_result,
 
   // AINFO << "FLAGS_planner_open_space_config_filename: "
   //       << FLAGS_planner_open_space_config_filename;
-  std::cout << "[DistancePlan]: start \n";
+  // std::cout << "[DistancePlan]: start \n";
 
   double hybrid_total = 0.0;
   double dual_total = 0.0;

@@ -21,7 +21,7 @@ list(APPEND PROTOC_FLAGS "--${GEN_LANG}_out=${CMAKE_BINARY_DIR}")
 
 list(APPEND proto_files 
   # main-module configs
-  "gpir_dev/gp_planner/benchmark/TDR_OBCA/proto/planner_open_space_config.proto"
+  "gpir/gp_planner/benchmark/TDR_OBCA/proto/planner_open_space_config.proto"
 )
 
 # Absolute paths of .proto files to be passed to protoc program
