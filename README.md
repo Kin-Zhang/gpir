@@ -204,8 +204,8 @@ Add other agents and obstacle in the lane
 
 Modify `town parameter` in `carla_setup.launch` and `planning.launch`
 
-<mark>TODO</mark>: This need change the spawn point (or use random spawn point)
+<mark>**<u>TODO</u>**</mark>: This need change the spawn point (or use random spawn point)
 
 ## Citation
 
-<mark>TODO</mark>
+**<u><mark>TODO</mark></u>**

@@ -23,8 +23,8 @@ namespace plt = matplotlibcpp;
 using apollo::common::math::Vec2d;
 
 std::string save_path =
-    "/home/cj/research/gpir_ws/src/gpir/gp_planner/data/"
-    "curvature_benchmark-1.csv";
+    "/home/kin/research/gpir_ws/src/gpir/gp_planner/data/"
+    "curvature_benchmark.csv";
 std::ofstream logger;
 
 void LogPathData(std::string planner, const std::vector<double>& x,
