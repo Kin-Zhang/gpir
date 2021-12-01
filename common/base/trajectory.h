@@ -5,8 +5,10 @@
 #include <Eigen/Dense>
 #include <iomanip>
 #include <vector>
+#include <iostream>
 
 #include "common/base/state.h"
+#include "common/utils/math.h"
 
 namespace common {
 
@@ -31,6 +33,36 @@ class Trajectory : public std::vector<common::State> {
 
   const common::State& GetNearestState(const Eigen::Vector2d& pos) const {
     return data()[GetNearsetIndex(pos)];
+  }
+
+  const common::State GetInterpolatedNearestState(
+      const Eigen::Vector2d& pos) const {
+    auto index = GetNearsetIndex(pos);
+    const auto& near_state = data()[index];
+    auto tanget = Eigen::Vector2d(std::cos(near_state.heading),
+                                  std::sin(near_state.heading));
+    Eigen::Vector2d vec = pos - near_state.position;
+    auto next_index = index;
+    if (vec.dot(tanget) >= 0) {
+      next_index += 1;
+    } else {
+      next_index = index;
+      index = std::max(0, index - 1);
+    }
+    // std::cout << "wtf??" << std::endl;
+
+    const auto& s0 = data()[index];
+    const auto& s1 = data()[next_index];
+    double w =
+        (pos.x() - s0.position.x()) / (s1.position.x() - s0.position.x());
+    common::State inter_state;
+    inter_state.position = (1 - w) * s0.position + w * s1.position;
+    inter_state.heading = common::InterpolateAngle(
+        s0.heading, s0.position.x(), s1.heading, s1.position.x(), pos.x());
+    inter_state.kappa = (1 - w) * s0.kappa + w * s1.kappa;
+    inter_state.velocity = (1 - w) * s0.velocity + w * s1.velocity;
+    // std::cout << "wtf???" << std::endl;
+    return inter_state;
   }
 };
 

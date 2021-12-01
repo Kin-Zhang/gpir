@@ -16,7 +16,7 @@ set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -march=native") # have to enable becaus
 set(GTSAM_DIR ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/gtsam-4.1rc/install/lib/cmake/GTSAM)
 find_package(GTSAM REQUIRED)
 find_package(Eigen3 REQUIRED)
-find_package(Python2 COMPONENTS Development NumPy)
+find_package(Python3 COMPONENTS Development NumPy)
 find_package(OpenMP REQUIRED)
 if (OPENMP_FOUND)
     set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
@@ -29,11 +29,12 @@ catkin_package()
 # avoid tons of warnnings inside libeigen
 include_directories(SYSTEM 
   ${EIGEN3_INCLUDE_DIR}
-  ${Python2_INCLUDE_DIRS} ${Python2_NumPy_INCLUDE_DIRS}
+  ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS}
 )
 include_directories(
   ${CMAKE_SOURCE_DIR}/gpir
   ${CMAKE_BINARY_DIR}/gpir
+  "./thirdparty/"
   "./thirdparty/traj_min_jerk"
 )
 

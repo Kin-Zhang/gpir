@@ -21,6 +21,7 @@
 #include "gp_planner/benchmark/DL_IAPS/coarse_trajectory_generator/speed_data.h"
 
 #include <algorithm>
+#include <memory>
 #include <mutex>
 #include <utility>
 
@@ -29,10 +30,9 @@
 namespace apollo {
 namespace planning {
 
-
 #define UNIQUE_LOCK_MULTITHREAD(mutex_type)                         \
   std::unique_ptr<std::unique_lock<std::mutex>> lock_ptr = nullptr; \
-  if (false) {                                      \
+  if (false) {                                                      \
     lock_ptr.reset(new std::unique_lock<std::mutex>(mutex_type));   \
   }
 

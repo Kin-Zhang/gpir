@@ -28,7 +28,7 @@ void GPPlanner::Init() {
   vehicle_param_ = VehicleInfo::Instance().vehicle_param();
 
   recorder_ = std::make_unique<std::ofstream>(
-      "/home/udi/research/gpir_ws/src/gpir/gp_planner/data/"
+      "/home/udi/research/gpir_ws/src/gpir_dev/gp_planner/data/"
       "computation_time.csv",
       std::ios::trunc);
 
@@ -273,7 +273,7 @@ bool GPPlanner::PlanWithGPIR(
 
   if (save_snapshot_) {
     st_graph.SaveSnapShot(
-        "/home/udi/research/gpir_ws/src/gpir/gp_planner/data");
+        "/home/udi/research/gpir_ws/src/gpir_dev/gp_planner/data");
     save_snapshot_ = false;
   }
 
