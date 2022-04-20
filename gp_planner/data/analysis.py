@@ -33,7 +33,7 @@ def draw_polygon(ax, top_left, bottom_right):
     )
 
 
-root_path = pathlib.Path("/home/cj/research/gpir_ws/src/gpir/gp_planner/data/")
+root_path = pathlib.Path("/home/kin/gpir_ws/src/gpir/gp_planner/data/")
 env_path = root_path / "env"
 info_path = root_path / "info"
 res_path = root_path / "results"

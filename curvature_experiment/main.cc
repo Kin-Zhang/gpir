@@ -86,7 +86,7 @@ int main(int argc, char* argv[]) {
 
   // load trajectory
   std::string file(
-      "/home/cj/research/gpir_ws/src/gpir/curvature_experiment/"
+      "/home/kin/gpir_ws/src/gpir/curvature_experiment/"
       "curvature_benchmark.csv");
   std::vector<double> x, y, s, kappa;
   std::vector<std::string> planner;

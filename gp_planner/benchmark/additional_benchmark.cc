@@ -30,7 +30,7 @@ static const double kappa_limit = 0.2;
 static bool plot = false;
 
 std::string save_path =
-    "/home/cj/research/gpir_ws/src/gpir/gp_planner/data/"
+    "/home/kin/gpir_ws/src/gpir/gp_planner/data/"
     "curvature_benchmark-1.csv";
 std::ofstream info_logger;
 std::ofstream result_logger;
@@ -103,11 +103,11 @@ int main(int argc, char const* argv[]) {
   int g3p_cur_success = 0, dl_iaps_success = 0, tdr_obca_success = 0;
 
   std::string info_path =
-      "/home/cj/research/gpir_ws/src/gpir/gp_planner/data/info/";
+      "/home/kin/gpir_ws/src/gpir/gp_planner/data/info/";
   std::string results_path =
-      "/home/cj/research/gpir_ws/src/gpir/gp_planner/data/results/";
+      "/home/kin/gpir_ws/src/gpir/gp_planner/data/results/";
   std::string env_path =
-      "/home/cj/research/gpir_ws/src/gpir/gp_planner/data/env/";
+      "/home/kin/gpir_ws/src/gpir/gp_planner/data/env/";
 
   tqdm bar;
   for (int i = 500; i < total_trial; ++i) {

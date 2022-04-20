@@ -103,7 +103,7 @@ int main(int argc, char const* argv[]) {
   // st_graph.VisualizeStGraph();
 
   std::string file_path =
-      "/home/udi/research/gpir_ws/src/gpir_dev/gp_planner/data/"
+      "/home/kin/gpir_ws/src/gpir_dev/gp_planner/data/"
       "incremental_data.csv";
   std::ofstream writer = std::ofstream(file_path, std::ios::trunc);
 
@@ -213,7 +213,7 @@ int main(int argc, char const* argv[]) {
   // plt::subplot(3, 1, 3);
   // plt::plot(t1, k);
   // plt::show();
-  // st_graph.SaveSnapShot("/home/udi/research/ral2021_gpir/data");
+  // st_graph.SaveSnapShot("/home/kin/ral2021_gpir/data");
 
   return 0;
 }

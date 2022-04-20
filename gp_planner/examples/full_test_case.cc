@@ -122,7 +122,7 @@ int main(int argc, char const* argv[]) {
   st_graph.GenerateTrajectory(reference_line, gp_path, &traj);
   st_graph.VisualizeStGraph();
 
-  // st_graph.SaveSnapShot("/home/udi/research/ral2021_gpir/data");
+  // st_graph.SaveSnapShot("/home/kin/ral2021_gpir/data");
 
   return 0;
 }

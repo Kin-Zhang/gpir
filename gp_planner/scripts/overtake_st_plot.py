@@ -107,5 +107,5 @@ ax.grid(alpha=0.3)
 
 
 
-fig.savefig("/home/udi/research/ral2021_gpir/figure/oads_st1.pdf", format="pdf", bbox_inches="tight", pad_inches=0, dpi=300)
+fig.savefig("/home/kin/ral2021_gpir/figure/oads_st1.pdf", format="pdf", bbox_inches="tight", pad_inches=0, dpi=300)
 plt.show()
