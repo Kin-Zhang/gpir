@@ -9,7 +9,66 @@ from numpy import random
 from pygame.locals import *
 from sensor_msgs.msg import Joy
 from geometry_msgs.msg import PoseStamped
+from visualization_msgs.msg import MarkerArray
+class ObstacleGenerator:
+    def __init__(self, args):
+        self.client = carla.Client(args.host, args.port)
+        self.client.set_timeout(10.0)
+        self.world = self.client.get_world()
+        self.map = self.world.get_map()
+        self.actor_list = []
+        self.spectator = self.world.get_spectator()
+        while True:
+            actors = self.world.get_actors().filter("vehicle.*")
+            if actors != None:
+                self.ego = actors[0]
+                print("find ego vehicle, id: {}".format(self.ego.id))
+                break
+            print("wait for ego vehicle")
+            time.sleep(1)
 
+    def spawn_agent(self, transform):
+        cones_bp = self.world.get_blueprint_library().filter("static.prop.constructioncone")
+        cone_bp = cones_bp[0]
+        # print(cone_bp.get_attribute('size'))
+        cone_actor = self.world.spawn_actor(cone_bp, transform)
+        self.actor_list.append(cone_actor.id)
+        return self.actor_list[-1]
+
+    def get_nearby_waypoint(self, waypoint, distance=50):
+        nearby_wp = (
+            waypoint.next(distance)
+            if distance >= 0
+            else waypoint.previous(abs(distance))
+        )
+        if nearby_wp:
+            wp_transform = nearby_wp[-1].transform
+            # wp_transform.
+        else:
+            wp_transform = None
+        return wp_transform
+        
+    def spawn_agent_at(self, location=None):
+        ego_waypoint = self.map.get_waypoint(self.ego.get_transform().location)
+        print("ego location:", self.ego.get_transform().location.x)
+        if location is None:
+            spawn_point_transform = self.get_nearby_waypoint(ego_waypoint)
+        else:
+            spawn_point_transform = carla.Transform(carla.Location(x=location[0],y=location[1]),carla.Rotation(yaw=-180.0))
+        actor = self.spawn_agent(spawn_point_transform)
+        if actor != None:
+            print("succeed to spawn cone at {}".format(spawn_point_transform))
+        return actor
+
+    def set_spectator(self):
+        loc = self.ego.get_transform().location
+        self.spectator.set_transform(carla.Transform(carla.Location(x=loc.x,y=loc.y,z=50),carla.Rotation(yaw=0,pitch=-90,roll=0)))
+
+    def destory(self):
+        print("\ndestroying %d actors" % len(self.actor_list))
+        for actor in self.actor_list:
+            self.world.get_actor(actor).destroy()
+        time.sleep(0.5)
 
 class AgentGenerator:
     def __init__(self, args):
@@ -158,15 +217,29 @@ class AgentGenerator:
         time.sleep(0.5)
 
 
+
 class KeyboardHandler:
     def __init__(self, args):
+        self.previous_x = 0
         self.cmd_count = 0
+        self.marker_sub = rospy.Subscriber("/virtual_obstacle", MarkerArray, self.cones_callback)
         self.joy_pub = rospy.Publisher("/joy", Joy, queue_size=10)
         self.ego_cmd_pub = rospy.Publisher(
             "/move_base_simple/goal", PoseStamped, queue_size=10
         )
         if not args.joy_only:
             self.agent_generator = AgentGenerator(args)
+            self.obstacle_generator = ObstacleGenerator(args)
+    
+    def cones_callback(self, data):
+        if len(data.markers)!=0:
+            position_obs = data.markers[0].pose.position
+            if self.previous_x != position_obs.x:
+                loc = [position_obs.x, -position_obs.y, position_obs.z]
+                self.obstacle_generator.spawn_agent_at(loc)
+                self.previous_x = position_obs.x
+                self.obstacle_generator.set_spectator()
+        # return
 
     def init_joy(self):
         joy = Joy()
@@ -211,6 +284,8 @@ class KeyboardHandler:
                 elif event.key == pg.K_e:
                     print("{}: Add virtual obstacles to lane".format(self.cmd_count))
                     joy.buttons[5] = 1
+                    # self.obstacle_generator.spawn_agent_at()
+                    # self.obstacle_generator.set_spectator()
                     self.publish_joy(joy)
                 elif event.key == pg.K_t:
                     print("{}: Save snapshot of s-t graph".format(self.cmd_count))
@@ -320,6 +395,7 @@ class KeyboardHandler:
 
     def destroy(self):
         self.agent_generator.destory()
+        self.obstacle_generator.destory()
         pass
 
 
