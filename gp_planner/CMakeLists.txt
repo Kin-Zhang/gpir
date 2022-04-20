@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.13.0)
 project(gp_planner CXX)
-
+find_package(Python3 COMPONENTS NumPy)# 
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED true)
 
@@ -44,6 +44,8 @@ add_subdirectory(initializer)
 add_subdirectory(st_plan)
 add_subdirectory(examples)
 add_subdirectory(benchmark)
+
+find_package(Python3 COMPONENTS NumPy)# 
 
 add_library(gp_planner gp_planner.cc)
 target_link_libraries(gp_planner
