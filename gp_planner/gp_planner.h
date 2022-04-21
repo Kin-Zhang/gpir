@@ -19,7 +19,7 @@ class GPPlanner : public Planner {
   void Init() override;
   void PlanOnce(NavigationMap* navigation_map_) override;
 
-  void LogDebugInfo() override {}  // save_snapshot_ = true; }
+  void LogDebugInfo() override { save_snapshot_ = true; }
 
  protected:
   bool PlanWithGPIR(const common::State& ego_state,

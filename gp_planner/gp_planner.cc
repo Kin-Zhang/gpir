@@ -28,11 +28,11 @@ void GPPlanner::Init() {
   vehicle_param_ = VehicleInfo::Instance().vehicle_param();
 
   recorder_ = std::make_unique<std::ofstream>(
-      "/home/kin/gpir_ws/src/gpir_dev/gp_planner/data/"
+      "/home/kin/gpir_ws/src/gpir/gp_planner/data/"
       "computation_time.csv",
       std::ios::trunc);
 
-  // common::DotLog(*recorder_, "sdf", "init_path", "init_st", "refinement");
+  common::DotLog(*recorder_, "sdf", "init_path", "init_st", "refinement");
 }
 
 // void GPPlanner::PlanOnce(NavigationMap* navigation_map_) {
@@ -273,7 +273,7 @@ bool GPPlanner::PlanWithGPIR(
 
   if (save_snapshot_) {
     st_graph.SaveSnapShot(
-        "/home/kin/gpir_ws/src/gpir_dev/gp_planner/data");
+        "/home/kin/gpir_ws/src/gpir/gp_planner/data");
     save_snapshot_ = false;
   }
 
