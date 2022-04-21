@@ -254,7 +254,7 @@ class KeyboardHandler:
             img_array = np.reshape(img_array, (image.height, image.width, 4))
             img_array = img_array[:, :, :3]
             img_array = img_array[:, :, ::-1]
-            PIL_IMAGE.fromarray(img_array).save(self.save_path / 'rgb_front' / ('%04d.png' % self.cmd_count))
+            PIL_IMAGE.fromarray(img_array).save(self.save_path / ('%04d.png' % self.cmd_count))
             self.save_img_trigger = False
 
     def init_joy(self):

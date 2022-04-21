@@ -84,7 +84,7 @@ int main(int argc, char const* argv[]) {
 
   // prepare reference_line
   std::vector<hdmap::WayPoint> waypoints;
-  for (int i = 0; i <= 120; ++i) {
+  for (int i = 0; i <= 200; ++i) {
     hdmap::WayPoint waypoint;
     waypoint.point = Eigen::Vector2d(i, 0.0);
     waypoint.s = i;
@@ -94,11 +94,12 @@ int main(int argc, char const* argv[]) {
   ReferenceLine reference_line;
   reference_line.GenerateReferenceLine(waypoints);
 
-  double plan_length = 70;
-
+  double offset = 10;
+  double plan_length = 70+offset;
+  double end_point_x = 90.0+offset;
   // prepare sdf
 
-  const int total_trial = 1000;
+  const int total_trial = 2;
   int total_num = 0;
   int g3p_cur_success = 0, dl_iaps_success = 0, tdr_obca_success = 0;
 
@@ -110,11 +111,11 @@ int main(int argc, char const* argv[]) {
       "/home/kin/gpir_ws/src/gpir/gp_planner/data/env/";
 
   tqdm bar;
-  for (int i = 500; i < total_trial; ++i) {
+  for (int i = 0; i < total_trial; ++i) {
     bar.progress(i, total_trial);
     OccupancyMap occupancy_map;
     occupancy_map.set_origin({0, -7.5});
-    occupancy_map.set_cell_number(std::array<int, 2>{1100, 150});
+    occupancy_map.set_cell_number(std::array<int, 2>{int(1100+offset*30), 150});
     occupancy_map.set_resolution({0.1, 0.1});
 
     double delta_obs1_x = 1.5 * RandomDouble(0, 1);
@@ -123,11 +124,13 @@ int main(int argc, char const* argv[]) {
     double delta_obs2_y = 1.5 * RandomDouble(0, 1);
     double delta_obs3_x = 1.5 * RandomDouble(0, 1);
     double delta_obs3_y = 1.5 * RandomDouble(0, 1);
+    double delta_obs4_x = 1.5 * RandomDouble(0, 1);
+    double delta_obs4_y = 1.5 * RandomDouble(0, 1);
     // printf("%f,%f,%f\n", delta_obs1_x, delta_obs2_x, delta_obs3_x);
     // printf("%f,%f,%f\n", delta_obs1_y, delta_obs2_y, delta_obs3_y);
 
     // obstacles x 3
-    const size_t k_obstacle_num = 3;
+    const size_t k_obstacle_num = 4;
     std::vector<vector_Eigen2d> obstacles{
         {Eigen::Vector2d(30 + delta_obs1_x, -4 + delta_obs1_y),
          Eigen::Vector2d(35 + delta_obs1_x, -4 + delta_obs1_y),
@@ -140,7 +143,11 @@ int main(int argc, char const* argv[]) {
         {Eigen::Vector2d(60 + delta_obs3_x, -2 + delta_obs3_y),
          Eigen::Vector2d(65 + delta_obs3_x, -2 + delta_obs3_y),
          Eigen::Vector2d(65 + delta_obs3_x, 7.5 + delta_obs3_y),
-         Eigen::Vector2d(60 + delta_obs3_x, 7.5 + delta_obs3_y)}};
+         Eigen::Vector2d(60 + delta_obs3_x, 7.5 + delta_obs3_y)},
+        {Eigen::Vector2d(75 + delta_obs4_x, -7.5 + delta_obs4_y),
+         Eigen::Vector2d(80 + delta_obs4_x, -7.5 + delta_obs4_y),
+         Eigen::Vector2d(80 + delta_obs4_x, 2 + delta_obs4_y),
+         Eigen::Vector2d(75 + delta_obs4_x, 2 + delta_obs4_y)}};
 
     // example: 4 obstacles, edge num are
     //   3, 2, 3, 2 = 10, with
@@ -151,8 +158,8 @@ int main(int argc, char const* argv[]) {
     // obstacles_edges_num_ << 3, 2, 3, 2;
     //    第一个障碍物有2条边,第二个1条... (既几条线段连续组成)
     Eigen::MatrixXi edge_num_each_obs;
-    edge_num_each_obs.resize(3, 1);
-    edge_num_each_obs << 4, 4, 4;
+    edge_num_each_obs.resize(4, 1);
+    edge_num_each_obs << 4, 4, 4, 4;
     std::vector<double> obs_vertexs = {
         30 + delta_obs1_x,   -4 + delta_obs1_y,   35 + delta_obs1_x,
         -4 + delta_obs1_y,   35 + delta_obs1_x,   7.5 + delta_obs1_y,
@@ -163,6 +170,9 @@ int main(int argc, char const* argv[]) {
         60 + delta_obs3_x,   -2 + delta_obs3_y,   65 + delta_obs3_x,
         -2 + delta_obs3_y,   65 + delta_obs3_x,   7.5 + delta_obs3_y,
         60 + delta_obs3_x,   7.5 + delta_obs3_y,  //
+        75 + delta_obs4_x,   -7.5 + delta_obs4_y,   80 + delta_obs4_x,
+        -7.5 + delta_obs4_y,   80 + delta_obs4_x,   2 + delta_obs4_y,
+        75 + delta_obs4_x,   2 + delta_obs4_y,  //
     };
 
     for (const auto obstacle : obstacles) {
@@ -183,10 +193,10 @@ int main(int argc, char const* argv[]) {
     auto sdf =
         std::make_shared<SignedDistanceField2D>(std::move(occupancy_map));
     // cv::imshow("SDF-Rviz", sdf->occupancy_map().BinaryImage());
-    // cv::waitKey(0);
+    // cv::waitKey(100);
     sdf->UpdateSDF();
 
-    std::vector<double> hint{32.5, 47.5, 62.5};
+    std::vector<double> hint{32.5, 47.5, 62.5, 77.5};
 
     common::State initial_state;
     initial_state.position = Eigen::Vector2d(20.0, 0);
@@ -250,7 +260,7 @@ int main(int argc, char const* argv[]) {
       initial_guess_obca.accumulated_s.emplace_back(samples[i].s);
     }
     LogPathData("GPNoCur", x, y, theta, k);
-
+    // LogInfo("GPNoCur", success, gp_cur_time);
     if (plot) {
       plt::subplot(2, 1, 1);
       plt::named_plot("G3P", x, y);
@@ -369,7 +379,7 @@ int main(int argc, char const* argv[]) {
         &initial_guess_obca, &obs_container, &tdr_obca_result,
         initial_state.position.x(), initial_state.position.y(),
         initial_state.heading,  //
-        90.0, 0, 0,             //
+        end_point_x, 0, 0,             //
         &XYbounds[0]);
     double tdr_obca_time = timer.End();
 
@@ -404,9 +414,9 @@ int main(int argc, char const* argv[]) {
     // plt::show
     if (plot) {
       plt::subplot(2, 1, 1);
-      plt::xlim(0, 90);
+      plt::xlim(0, int(end_point_x));
       plt::subplot(2, 1, 2);
-      plt::xlim(0, 90);
+      plt::xlim(0, int(end_point_x));
       plt::show();
     }
 
