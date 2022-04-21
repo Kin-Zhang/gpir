@@ -10,6 +10,10 @@ from pygame.locals import *
 from sensor_msgs.msg import Joy
 from geometry_msgs.msg import PoseStamped
 from visualization_msgs.msg import MarkerArray
+from sensor_msgs.msg import Image
+from PIL import Image as PIL_IMAGE
+import numpy as np
+
 class ObstacleGenerator:
     def __init__(self, args):
         self.client = carla.Client(args.host, args.port)
@@ -217,7 +221,7 @@ class AgentGenerator:
         time.sleep(0.5)
 
 
-
+import pathlib
 class KeyboardHandler:
     def __init__(self, args):
         self.previous_x = 0
@@ -230,7 +234,10 @@ class KeyboardHandler:
         if not args.joy_only:
             self.agent_generator = AgentGenerator(args)
             self.obstacle_generator = ObstacleGenerator(args)
-    
+        self.image_subscriber = rospy.Subscriber("/carla/ego_vehicle/rgb_view/image", Image, self.img_callback, queue_size=10)
+        self.save_img_trigger = False
+        self.save_path = pathlib.Path('/home/kin/gpir_ws/src/gpir/gp_planner/data/photo')
+
     def cones_callback(self, data):
         if len(data.markers)!=0:
             position_obs = data.markers[0].pose.position
@@ -240,6 +247,15 @@ class KeyboardHandler:
                 self.previous_x = position_obs.x
                 self.obstacle_generator.set_spectator()
         # return
+    def img_callback(self, image):
+        if self.save_img_trigger == True:
+            img_array = np.frombuffer(image.data, dtype=np.dtype("uint8"))
+            print("save images")
+            img_array = np.reshape(img_array, (image.height, image.width, 4))
+            img_array = img_array[:, :, :3]
+            img_array = img_array[:, :, ::-1]
+            PIL_IMAGE.fromarray(img_array).save(self.save_path / 'rgb_front' / ('%04d.png' % self.cmd_count))
+            self.save_img_trigger = False
 
     def init_joy(self):
         joy = Joy()
@@ -289,7 +305,9 @@ class KeyboardHandler:
                     self.publish_joy(joy)
                 elif event.key == pg.K_t:
                     print("{}: Save snapshot of s-t graph".format(self.cmd_count))
-                    joy.buttons[5] = 1
+                    joy.buttons[6] = 1
+                    self.save_img_trigger = True
+                    print("{}: Save picture in CARLA".format(self.cmd_count))
                     self.publish_joy(joy)
                 elif event.key == pg.K_1:
                     print("add 1 obstacle")
@@ -342,10 +360,12 @@ class KeyboardHandler:
                     # actor1 = self.agent_generator.spawn_agent_at("front_left", 0)
                     # actor1 = self.agent_generator.spawn_agent_at("front_left", 8)
                     # actor2 = self.agent_generator.spawn_agent_at("front_left", 16)
+                    actor4 = self.agent_generator.spawn_agent_at("back_left", -10)
                     actor2 = self.agent_generator.spawn_agent_at("front_left", 24)
                     # actor2 = self.agent_generator.spawn_agent_at("front_left", 32)
                     actor3 = self.agent_generator.spawn_agent_at("front_right", 8)
                     actor3 = self.agent_generator.spawn_agent_at("front_right", 16)
+                    actor4 = self.agent_generator.spawn_agent_at("back_right", -10)
                     # actor3 = self.agent_generator.spawn_agent_at("front_right", 24)
                     # actor3 = self.agent_generator.spawn_agent_at("front_right", 32)
                     # actor3 = self.agent_generator.spawn_agent_at("front_right", 40)
