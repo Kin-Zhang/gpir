@@ -20,6 +20,6 @@ target_sources(common_smoothing
 )
 
 target_link_libraries(common_smoothing 
-  glog
+  glog::glog
   common_solver
 )

@@ -16,7 +16,7 @@ target_include_directories(planning_core_carla PUBLIC
 )
 
 target_link_libraries(planning_core_carla
-  glog
+  glog::glog
   ${roscpp_LIBRARIES}
   ${tf_LIBRARIES}
   planning_core::common

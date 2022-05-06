@@ -7,7 +7,7 @@ target_sources(planning_core_navigation PRIVATE
   route_sequence.cc
 )
 target_link_libraries(planning_core_navigation
-  glog
+  glog::glog
   hdmap
   common::frenet
   common::smoothing

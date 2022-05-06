@@ -13,6 +13,6 @@ target_include_directories(common_solver PUBLIC
 )
 
 target_link_libraries(common_solver 
-  glog
+  glog::glog
   osqp::osqpstatic
 )

@@ -6,6 +6,6 @@ target_sources(hdmap_routing PRIVATE
   full_route.cc
 ) 
 target_link_libraries(hdmap_routing
-  glog
+  glog::glog
   ad_map_access
 )
