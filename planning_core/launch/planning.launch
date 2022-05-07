@@ -3,6 +3,7 @@
 <arg name="map_path" default="$(find hdmap)/maps/"/>
 <arg name="town" default="Town06"/>
 <arg name="simulator" default="Carla"/>
+<arg name="set_incremental_refinement" default="true"/>
 
 <env name="LD_LIBRARY_PATH" value="$(env LD_LIBRARY_PATH):/$(find gp_planner)/thirdparty/gtsam-4.1rc/install/lib"/>
 <node pkg="planning_core" name="planning" type="planning" output="screen">
@@ -10,6 +11,7 @@
   <param name="simulator" value="$(arg simulator)"/>
   <param name="map_path" value="$(arg map_path)"/>
   <param name="random_drive_mode" value="true"/>
+  <param name="set_incremental_refinement" value="$(arg set_incremental_refinement)"/>
 </node>
 
 <node pkg="planning_core" name="carla_controller" type="carla_controller" >

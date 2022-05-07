@@ -248,6 +248,8 @@ bool GPPlanner::PlanWithGPIR(
 
   GPPath gp_path;
   GPIncrementalPathPlanner gp_path_planner(sdf);
+  gp_path_planner.set_enable_incremental_refinement(set_incremental_refinement_);
+
   if (!gp_path_planner.GenerateInitialGPPath(reference_line, frenet_state, 100,
                                              obstacle_location_hint,
                                              &gp_path)) {
@@ -281,12 +283,17 @@ bool GPPlanner::PlanWithGPIR(
   vector_Eigen3d invalid_lat_frenet_s;
   while (trajectory_index_ < 1 &&
          !st_graph.IsTrajectoryFeasible(gp_path, &invalid_lat_frenet_s)) {
-    gp_path_planner.UpdateGPPath(reference_line, invalid_lat_frenet_s,
-                                 &gp_path);
-    // gp_path_planner.UpdateGPPathNonIncremental(reference_line,
-    //                                            invalid_lat_frenet_s,
-    //                                            &gp_path);
-    // st_graph.UpdateSpeedProfile(gp_path);
+    if(set_incremental_refinement_)
+      gp_path_planner.UpdateGPPath(reference_line, invalid_lat_frenet_s,
+                                  &gp_path);
+    else
+    {
+      gp_path_planner.UpdateGPPathNonIncremental(reference_line,
+                                                invalid_lat_frenet_s,
+                                                &gp_path);
+      // st_graph.UpdateSpeedProfile(gp_path);
+    }
+
     if (iter_count++ == max_iter) {
       LOG(WARNING) << "[GPIR]: reach maximum iterations";
       break;

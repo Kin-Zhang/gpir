@@ -4,6 +4,11 @@
 
 <mark>TODO</mark>
 
+Test System:
+
+- Ubuntu 18.04, ROS melodic, CARLA 0.9.11
+- Ubuntu 20.04, ROS noetic, CARLA 0.9.11
+
 ## Prerequisites
 
 - [Carla-0.9.11](https://github.com/carla-simulator/carla/releases/tag/0.9.11)

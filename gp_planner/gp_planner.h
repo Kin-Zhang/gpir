@@ -20,7 +20,9 @@ class GPPlanner : public Planner {
   void PlanOnce(NavigationMap* navigation_map_) override;
 
   void LogDebugInfo() override { save_snapshot_ = true; }
-
+  inline void set_enable_incremental_refinements(const bool option) override{
+    set_incremental_refinement_ = option;
+  }
  protected:
   bool PlanWithGPIR(const common::State& ego_state,
                     const ReferenceLine& reference_line,
@@ -62,6 +64,7 @@ class GPPlanner : public Planner {
   std::vector<Obstacle> dynamic_obstacles_;
 
   bool save_snapshot_ = false;
+  bool set_incremental_refinement_ = true;
 
   hdmap::LaneSegmentBehavior last_behavior_ = hdmap::LaneSegmentBehavior::kKeep;
 

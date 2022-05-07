@@ -166,12 +166,16 @@ bool GPIncrementalPathPlanner::GenerateInitialGPPath(
 
       graph_.add(GPPriorFactor(last_key, key, interval_, kQc));
 
+
+      // 靠近参考线的软约束 TODO: 并不清楚会有什么区别
       if (current_s > 0) {
         graph_.add(PriorFactor3(key, x_ref, sigma_reference));
       }
       // if (current_s > initial_state.s[1] * 3) {
       //   graph_.add(PriorFactor3(key, x_ref, sigma_reference));
       // }
+
+
       graph_.add(
           GPObstacleFactor(key, sdf_, 0.1, kEpsilon, current_s, kappa_r));
       if (enable_curvature_constraint_) {
