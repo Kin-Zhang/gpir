@@ -93,7 +93,7 @@
    ```
 
 - Ipopt: [Install doc](https://coin-or.github.io/Ipopt/INSTALL.html)
-   Note about: [HSL to IPOPT](https://stackoverflow.com/questions/58305144/trying-to-compile-hsl-to-get-ipopt)
+   **Note about: [HSL to IPOPT](https://stackoverflow.com/questions/58305144/trying-to-compile-hsl-to-get-ipopt) ** Must copy the `coinhsl` folder to ThirdParty-HSL
 
    **<u>System Dependence</u>**:
 
@@ -113,15 +113,17 @@
    make
    sudo make install
    ```
-
+	==Please copy `coinhsl` which is a license folder== see more on note about HSL to IPOPT
+   
    ```bash
    git clone https://github.com/coin-or-tools/ThirdParty-HSL.git
+   
    cd ThirdParty-HSL
    ./configure
    make
    sudo make install
    ```
-
+   
    ```bash
    git clone https://github.com/coin-or-tools/ThirdParty-Mumps.git
    cd ThirdParty-Mumps
@@ -130,9 +132,9 @@
    make
    sudo make install
    ```
-
+   
    Finally Install **<u>IPOPT</u>**:
-
+   
    ```bash
    git clone https://github.com/coin-or/Ipopt.git
    cd Ipopt
