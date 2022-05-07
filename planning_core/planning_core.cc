@@ -21,11 +21,13 @@ void PlanningCore::Init() {
   load_param &= node.getParam("town", town);
   load_param &= node.getParam("map_path", map_path);
   load_param &= node.getParam("random_drive_mode", random_drive_mode_);
+  load_param &= node.getParam("set_incremental_refinement", set_incremental_refinement_);
+  
   if (!load_param) LOG(FATAL) << "fail to init param";
 
   // init hdmap
   std::string map = map_path + town + ".txt";
-  std::string pcd = map_path + "pcd/" + town + ".pcd";
+  std::string pcd = "/home/kin/CARLA/HDMaps/" + town + ".pcd";
   if (!hdmap::HdMap::GetMap().LoadMap(map, pcd)) {
     LOG(FATAL) << "fail to init hdmap, \nmap: " << map << "\npcd: " << pcd;
   }
@@ -53,6 +55,7 @@ void PlanningCore::Init() {
   // init planner
   planner_ = std::make_unique<GPPlanner>();
   planner_->Init();
+  planner_->set_enable_incremental_refinements(set_incremental_refinement_);
 }
 
 void PlanningCore::Run(const ros::TimerEvent&) {

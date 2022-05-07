@@ -35,6 +35,8 @@ class PlanningCore {
   std::mutex route_mutex_;
   bool random_drive_mode_ = false;
   bool has_new_route_ = false;
+  bool set_incremental_refinement_ = true;
+  
   ros::Subscriber route_target_sub_;
   geometry_msgs::PoseStamped route_goal_;
 
