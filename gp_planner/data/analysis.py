@@ -4,7 +4,7 @@ import pathlib
 import prettytable
 import numpy as np
 
-from awesome_plot.style import figsize_utils
+# from awesome_plot.style import figsize_utils
 from matplotlib.patches import Polygon
 from tqdm import tqdm
 
@@ -40,7 +40,7 @@ res_path = root_path / "results"
 
 total_trial = len(list(info_path.glob("*")))
 
-plt.style.use(["science"])
+# plt.style.use(["science"])
 
 
 success_num = {"GPCur": 0, "DLIAPS": 0, "TDROBCA": 0}
@@ -53,42 +53,42 @@ for i in tqdm(range(total_trial)):
         success_num[row["planner"]] += row["success"]
         avg_time[row["planner"]].append(row["time"])
 
-    # fig, axes = plt.subplots(2, 1, figsize=figsize_utils.set_size("ral"))
-    # df_env = pd.read_csv(env_path / file_name, sep=",")
-    # df_res = pd.read_csv(res_path / file_name, sep=",")
-    # for planner in df_res.planner.unique():
-    #     sub_df = df_res[df_res.planner == planner]
-    #     if planner == "GPNoCur":
-    #         label = "G3P"
-    #     elif planner == "DLIAPS":
-    #         label = "DL-IAPS"
-    #     elif planner == "GPCur":
-    #         label = "G3P-Cur"
-    #     elif planner == "TDROBCA":
-    #         label = "TDR-OBCA"
-    #     axes[0].plot(sub_df.x, sub_df.y, label=label)
-    #     axes[1].plot(sub_df.x, sub_df.k, label=label)
+    fig, axes = plt.subplots(2, 1, figsize=(8,6))
+    df_env = pd.read_csv(env_path / file_name, sep=",")
+    df_res = pd.read_csv(res_path / file_name, sep=",")
+    for planner in df_res.planner.unique():
+        sub_df = df_res[df_res.planner == planner]
+        if planner == "GPNoCur":
+            label = "G3P"
+        elif planner == "DLIAPS":
+            label = "DL-IAPS"
+        elif planner == "GPCur":
+            label = "G3P-Cur"
+        elif planner == "TDROBCA":
+            label = "TDR-OBCA"
+        axes[0].plot(sub_df.x, sub_df.y, label=label)
+        axes[1].plot(sub_df.x, sub_df.k, label=label)
 
-    # for index, row in df_env.iterrows():
-    #     draw_polygon(
-    #         axes[0],
-    #         [row["left_top_x"], row["left_top_y"]],
-    #         [row["right_bottom_x"], row["right_bottom_y"]],
-    #     )
+    for index, row in df_env.iterrows():
+        draw_polygon(
+            axes[0],
+            [row["left_top_x"], row["left_top_y"]],
+            [row["right_bottom_x"], row["right_bottom_y"]],
+        )
 
-    # plt.rc("legend", fontsize=5)  # legend fontsize
-    # plt.rc("font", size=6)  # fontsize of the tick labels
-    # plt.rc("font", weight=2)  # fontsize of the tick labels
+    plt.rc("legend", fontsize=5)  # legend fontsize
+    plt.rc("font", size=6)  # fontsize of the tick labels
+    plt.rc("font", weight=2)  # fontsize of the tick labels
     # plt.rc("font", family="Times New Roman")  # fontsize of the tick labels
 
-    # for ax in axes:
-    #     ax.legend()
-    #     ax.xaxis.label.set_size(7)
-    #     ax.yaxis.label.set_size(7)
-    #     ax.tick_params(axis="both", which="major", labelsize=6)
-    #     ax.minorticks_off()
+    for ax in axes:
+        ax.legend()
+        ax.xaxis.label.set_size(7)
+        ax.yaxis.label.set_size(7)
+        ax.tick_params(axis="both", which="major", labelsize=6)
+        ax.minorticks_off()
 
-    # plt.show()
+    plt.show()
 
 for key in avg_time.keys():
     avg_time[key] = np.array(avg_time[key])
@@ -97,6 +97,12 @@ tab = prettytable.PrettyTable()
 tab.field_names = ["Planner", "Success rate", "Avg. time", "std"]
 tab.add_rows(
     [
+        # [
+        #     "GP-NoCur",
+        #     success_num["GPNoCur"] / total_trial,
+        #     avg_time["GPNoCur"].mean(),
+        #     avg_time["GPNoCur"].std(),
+        # ],
         [
             "GP-Cur",
             success_num["GPCur"] / total_trial,

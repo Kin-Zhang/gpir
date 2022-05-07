@@ -4,3 +4,6 @@
 **/*.csv
 
 gp_planner/thirdparty/gtsam-4.1rc/install
+gp_planner/benchmark/OP
+gp_planner/data/photo/
+gp_planner/figure

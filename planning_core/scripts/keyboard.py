@@ -224,7 +224,7 @@ class AgentGenerator:
 import pathlib
 class KeyboardHandler:
     def __init__(self, args):
-        self.previous_x = 0
+        self.previous_x = []
         self.cmd_count = 0
         self.marker_sub = rospy.Subscriber("/virtual_obstacle", MarkerArray, self.cones_callback)
         self.joy_pub = rospy.Publisher("/joy", Joy, queue_size=10)
@@ -240,12 +240,15 @@ class KeyboardHandler:
 
     def cones_callback(self, data):
         if len(data.markers)!=0:
-            position_obs = data.markers[0].pose.position
-            if self.previous_x != position_obs.x:
-                loc = [position_obs.x, -position_obs.y, position_obs.z]
-                self.obstacle_generator.spawn_agent_at(loc)
-                self.previous_x = position_obs.x
-                self.obstacle_generator.set_spectator()
+            for i in range(len(data.markers)):
+                position_obs = data.markers[i].pose.position
+                if position_obs.x not in self.previous_x:
+                    loc = [position_obs.x, -position_obs.y, position_obs.z]
+                    self.obstacle_generator.spawn_agent_at(loc)
+                    self.previous_x.append(position_obs.x)
+                    self.obstacle_generator.set_spectator()
+        else:
+            self.previous_x = []
         # return
     def img_callback(self, image):
         if self.save_img_trigger == True:
@@ -347,14 +350,16 @@ class KeyboardHandler:
                     print("Trigger agents' autopilot")
                     self.publish_ego_start_cmd()
                     self.agent_generator.trigger_autopilot()
-                # elif event.key == pg.K_1:
-                #     print("Merging scenario")
-                #     actor1 = self.agent_generator.spawn_agent_at("front", 10)
-                #     actor2 = self.agent_generator.spawn_agent_at("front_left", 5)
-                #     actor3 = self.agent_generator.spawn_agent_at("back_left", -5)
-                #     self.agent_generator.set_speed_percentage_difference(actor1, -150.0)
-                #     self.agent_generator.set_speed_percentage_difference(actor2, -150.0)
-                #     self.agent_generator.set_speed_percentage_difference(actor3, -150.0)
+                elif event.key == pg.K_n:
+                    print("Merging scenario")
+                    actor1 = self.agent_generator.spawn_agent_at("front", 10)
+                    actor2 = self.agent_generator.spawn_agent_at("front_left", 5)
+                    actor3 = self.agent_generator.spawn_agent_at("back_left", -5)
+                    actor4 = self.agent_generator.spawn_agent_at("front_right", 3)
+                    self.agent_generator.set_speed_percentage_difference(actor1, -150.0)
+                    self.agent_generator.set_speed_percentage_difference(actor2, -150.0)
+                    self.agent_generator.set_speed_percentage_difference(actor3, -150.0)
+                    self.agent_generator.set_speed_percentage_difference(actor4, -150.0)
                 elif event.key == pg.K_q:
                     print("obstacle avoidance experiment")
                     # actor1 = self.agent_generator.spawn_agent_at("front_left", 0)
