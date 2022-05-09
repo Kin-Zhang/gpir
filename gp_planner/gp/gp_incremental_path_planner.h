@@ -34,6 +34,9 @@ class GPIncrementalPathPlanner {
   bool UpdateGPPathNonIncremental(const ReferenceLine& reference_line,
                     const vector_Eigen3d& frenet_s, GPPath* gp_path);
 
+  bool UpdateGPPathNonRefinement(const ReferenceLine& reference_line,
+                    const vector_Eigen3d& frenet_s, GPPath* gp_path);
+
   inline void set_sdf(std::shared_ptr<SignedDistanceField2D> sdf) {
     sdf_ = sdf;
   }

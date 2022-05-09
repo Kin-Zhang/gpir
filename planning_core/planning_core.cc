@@ -27,7 +27,7 @@ void PlanningCore::Init() {
 
   // init hdmap
   std::string map = map_path + town + ".txt";
-  std::string pcd = "/home/kin/CARLA/HDMaps/" + town + ".pcd";
+  std::string pcd = "/home/kin/CARLA_0.9.11/HDMaps/" + town + ".pcd";
   if (!hdmap::HdMap::GetMap().LoadMap(map, pcd)) {
     LOG(FATAL) << "fail to init hdmap, \nmap: " << map << "\npcd: " << pcd;
   }

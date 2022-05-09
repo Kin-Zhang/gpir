@@ -288,12 +288,12 @@ bool GPPlanner::PlanWithGPIR(
                                   &gp_path);
     else
     {
-      gp_path_planner.UpdateGPPathNonIncremental(reference_line,
+      gp_path_planner.UpdateGPPathNonRefinement(reference_line,
                                                 invalid_lat_frenet_s,
                                                 &gp_path);
-      // st_graph.UpdateSpeedProfile(gp_path);
+      
     }
-
+    // st_graph.UpdateSpeedProfile(gp_path);
     if (iter_count++ == max_iter) {
       LOG(WARNING) << "[GPIR]: reach maximum iterations";
       break;

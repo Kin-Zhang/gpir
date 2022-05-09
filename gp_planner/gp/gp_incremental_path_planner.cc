@@ -392,6 +392,21 @@ bool GPIncrementalPathPlanner::UpdateGPPath(const ReferenceLine& reference_line,
   TOC("Update GP path");
   return true;
 }
+bool GPIncrementalPathPlanner::UpdateGPPathNonRefinement(
+    const ReferenceLine& reference_line, const vector_Eigen3d& frenet_s,
+    GPPath* gp_path) {
+  TIC;
+
+  gtsam::LevenbergMarquardtParams param;
+  param.setlambdaInitial(100.0);
+  param.setAbsoluteErrorTol(1e-5);
+  gtsam::LevenbergMarquardtOptimizer opt(graph_, map_result_, param);
+
+  map_result_ = opt.optimize();
+  gp_path->UpdateNodes(map_result_);
+  TOC("Non refinement");
+  return true;
+}
 
 bool GPIncrementalPathPlanner::UpdateGPPathNonIncremental(
     const ReferenceLine& reference_line, const vector_Eigen3d& frenet_s,
